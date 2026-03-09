@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Lecture Notes: Caching</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #ff5252;
+            --accent-light: #ff867c;
+            --cache-color: #e53935;
+            --db-color: #78909c;
+            --client-color: #4fc3f7;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 0 20px 0;
+            border-bottom: 2px solid var(--card-bg);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--accent-light);
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        p, li {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s forwards;
+        }
+
+        .highlight {
+            color: var(--accent-light);
+            font-weight: bold;
+        }
+
+        .note-box {
+            background-color: rgba(255, 82, 82, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        /* --- VISUALIZATIONS CSS --- */
+        .viz-container {
+            background-color: #121212;
+            border: 1px solid #333;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .viz-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .node {
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .node.client { background-color: var(--client-color); color: #000; }
+        .node.cache { background-color: var(--cache-color); color: #fff; }
+        .node.db { background-color: var(--db-color); color: #fff; border-radius: 50%; padding: 25px 15px;}
+        
+        .arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .arrow::after {
+            content: '➔';
+            font-size: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        .arrow.parallel {
+            flex-direction: row;
+            gap: 5px;
+        }
+
+        /* LRU Specific Viz */
+        .lru-box {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            width: 100%;
+            overflow-x: auto;
+        }
+        .hashmap {
+            border: 2px dashed #888;
+            padding: 15px;
+            border-radius: 8px;
+            min-width: 150px;
+        }
+        .dll {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dll-node {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #555;
+            text-align: center;
+        }
+        .dll-arrow {
+            color: #888;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Stagger animations for initial load */
+        .card:nth-child(2) { animation-delay: 0.1s; }
+        .card:nth-child(3) { animation-delay: 0.2s; }
+        .card:nth-child(4) { animation-delay: 0.3s; }
+
+    </style>
+</head>
+<body>
+
+<div class="feed-container">
+    <header>
+        <h1>Master Lecture Notes: Caching</h1>
+        <p style="color: var(--text-muted);">Distributed Systems Deep Dive • Scroll to learn</p>
+    </header>
+
+    <!-- SECTION 1 -->
+    <article class="card">
+        <h2>1. The "Why" & Background of Caching</h2>
+        <p>In all technology, caching is a way of providing <span class="highlight">faster reads</span> to the end client. It achieves this by using a faster form of data storage. In distributed systems, this almost always means storing data in <strong>RAM (Memory)</strong> instead of a Hard Disk.</p>
+        
+        <div class="note-box">
+            <strong>🎙️ Instructor's Insight:</strong> RAM is significantly faster than disk storage (often well over an order of magnitude, 10x+ faster). Caching also improves <em>data locality</em>, meaning you move the data physically closer to the user to reduce network travel time.
+        </div>
+
+        <h3>3 Main Objectives of Caching:</h3>
+        <ul>
+            <li><strong>Storing precomputed values:</strong> Instead of making the database calculate heavy analytics repeatedly, do the math once, store the answer in the cache, and serve it to everyone else.</li>
+            <li><strong>Fewer network calls:</strong> Stops requests from having to travel all the way to the main database.</li>
+            <li><strong>Fewer loads on the DB:</strong> Databases are often the bottleneck in large systems. Caches act as a shield.</li>
+        </ul>
+    </article>
+
+    <!-- SECTION 2 -->
+    <article class="card">
+        <h2>2. The Tradeoffs of Caching</h2>
+        <p>While caching provides massive speed improvements, introducing it adds significant system complexity.</p>
+        
+        <div class="viz-container">
+            <h3>The "Cache Miss" Penalty</h3>
+            <div class="viz-row">
+                <div class="node client">Client</div>
+                <div class="arrow">Requests Data</div>
+                <div class="node cache">Cache (Miss!)</div>
+                <div class="arrow">Forced to fetch</div>
+                <div class="node db">Database</div>
+            </div>
+            <p style="font-size: 0.9rem; color: #aaa; text-align: center;">If data isn't in the cache, the total trip takes <em>longer</em> than if there was no cache at all.</p>
+        </div>
+
+        <h3>Pros:</h3>
+        <ul>
+            <li>Massively faster reads (10x+ faster).</li>
+            <li>Potentially faster writes (depending on the write policy used).</li>
+        </ul>
+
+        <h3>Cons:</h3>
+        <ul>
+            <li><strong>Thrashing:</strong> When your cache size is too small for your user base. Example: You load your profile, it goes in the cache. Your friend loads theirs, it deletes yours to make room. You load yours again -> Cache Miss. The cache constantly overwrites itself, slowing everything down.</li>
+            <li><strong>Poor Eviction Policies:</strong> Deleting the wrong data to make room for new data.</li>
+            <li><strong>Write Complexity:</strong> You must design schemas to ensure cache data doesn't become "stale" compared to the database.</li>
+        </ul>
+    </article>
+
+    <!-- SECTION 3 -->
+    <article class="card">
+        <h2>3. Cache Eviction Policies</h2>
+        <p>RAM is expensive and limited. When the cache fills up, you must evict (delete) old data to make room for new data. The industry standard for interviews and basic implementation is <strong>LRU</strong>.</p>
+
+        <ul>
+            <li><strong>FIFO / LIFO:</strong> First in/Last in, first out.</li>
+            <li><strong>LFU:</strong> Least Frequently Used.</li>
+            <li><strong>Random Replacement</strong></li>
+            <li><span class="highlight">LRU (Least Recently Used):</span> Discards the data that was accessed the longest ago.</li>
+        </ul>
+
+        <div class="note-box">
+            <strong>💡 Interview Gold: How to implement LRU</strong><br>
+            If asked in a System Design or LeetCode interview, LRU is implemented using a <strong>Hashmap + Doubly Linked List</strong>. This allows for O(1) access and O(1) eviction.
+        </div>
+
+        <div class="viz-container">
+            <h3>LRU Implementation Visualization</h3>
+            <div class="lru-box">
+                <div class="hashmap">
+                    <strong>Hashmap (Key -> Node)</strong><br>
+                    <span style="color:#aaa; font-size: 0.8rem;">Points directly to memory addresses in the DLL for O(1) lookup.</span>
+                </div>
+                <div class="dll">
+                    <div class="dll-node"><span style="color:var(--accent-light)">Head</span><br>(Most Recent)</div>
+                    <div class="dll-arrow">⟷</div>
+                    <div class="dll-node">Node B</div>
+                    <div class="dll-arrow">⟷</div>
+                    <div class="dll-node"><span style="color:#888">Tail</span><br>(Evict Next)</div>
+                </div>
+            </div>
+            <p style="font-size: 0.9rem; color: #aaa; text-align: center;">Every time data is read, it moves to the Head. When full, the Tail is deleted from both the list and the Hashmap.</p>
+        </div>
+    </article>
+
+    <!-- SECTION 4 -->
+    <article class="card">
+        <h2>4. Where to put the Cache?</h2>
+        
+        <h3>Option A: Application Server Cache</h3>
+        <p>Storing the cache directly on the RAM of the application server.</p>
+        <ul>
+            <li><strong>Pro:</strong> Zero network calls required.</li>
+            <li><strong>Con:</strong> Data is trapped. Server 2 cannot see Server 1's cache. If Server 1 crashes, all its cached data is permanently lost.</li>
+        </ul>
+
+        <h3>Option B: Global Cache (Industry Standard)</h3>
+        <p>Using dedicated, standalone nodes (e.g., Redis, Memcached) exclusively for caching.</p>
+        <ul>
+            <li><strong>Pro:</strong> Can scale independently of app servers.</li>
+            <li><strong>Pro:</strong> Does not crash if an application server crashes.</li>
+            <li><strong>Pro:</strong> Single source of truth—can be accessed by <em>any</em> app server.</li>
+        </ul>
+    </article>
+
+    <!-- SECTION 5 -->
+    <article class="card">
+        <h2>5. Keeping Cache Updated on Writes</h2>
+        <p>If data changes, your cache cannot hold onto the old data, or users will see outdated information. You must choose a Write Policy.</p>
+
+        <!-- Write Through -->
+        <div class="viz-container">
+            <h3 style="margin: 0;">1. Write Through Cache</h3>
+            <div class="viz-row">
+                <div class="node client">Client</div>
+                <div>
+                    <div class="arrow">Parallel Write</div>
+                    <div class="arrow">Parallel Write</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="node cache">Cache</div>
+                    <div class="node db" style="border-radius: 8px; padding: 15px;">Database</div>
+                </div>
+            </div>
+            <p style="font-size: 0.95rem; padding: 0 15px;">
+                <strong>How it works:</strong> Writes to both cache and DB simultaneously.<br>
+                <strong>Tradeoff:</strong> Maximum consistency, but very slow. Requires a "2-phase commit protocol" (atomic transaction) to ensure both succeed or both fail.
+            </p>
+        </div>
+
+        <!-- Write Around -->
+        <div class="viz-container">
+            <h3 style="margin: 0;">2. Write Around Cache</h3>
+            <div class="viz-row">
+                <div class="node client">Client</div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <span style="color: #aaa; font-size: 0.8rem;">1. Invalidate Key</span>
+                    <span style="color: #aaa; font-size: 0.8rem;">2. Write Data</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="node cache" style="background-color: #555;">Cache (Data Deleted)</div>
+                    <div class="node db" style="border-radius: 8px; padding: 15px;">Database</div>
+                </div>
+            </div>
+            <p style="font-size: 0.95rem; padding: 0 15px;">
+                <strong>How it works:</strong> Write to DB, and instantly tell the cache to delete the old key. On the next read, the cache fetches the new data.<br>
+                <strong>Tradeoff:</strong> Simple to build, but guarantees a slow "cache miss" on the very first read after a write.
+            </p>
+        </div>
+
+        <!-- Write Back -->
+        <div class="viz-container">
+            <h3 style="margin: 0;">3. Write Back Cache</h3>
+            <div class="viz-row">
+                <div class="node client">Client</div>
+                <div class="arrow">1. Write Fast</div>
+                <div class="node cache">Cache</div>
+                <div class="arrow">2. Write Eventually (Bulk)</div>
+                <div class="node db">Database</div>
+            </div>
+            <p style="font-size: 0.95rem; padding: 0 15px;">
+                <strong>How it works:</strong> Client writes ONLY to the RAM cache. Later, the cache bulk-uploads updates to the DB.<br>
+                <strong>Tradeoff:</strong> Incredibly fast writes. However, if power fails before the bulk upload, data is permanently lost. Unacceptable for critical data (like passwords).
+            </p>
+        </div>
+    </article>
+
+    <!-- SECTION 6 -->
+    <article class="card">
+        <h2>6. Advanced: Cache Consistency & Distributed Locks</h2>
+        <p>What if we want the extreme speed of a <strong>Write Back</strong> cache, but we also need other servers to instantly see those changes before they are saved to the hard disk database?</p>
+        
+        <p><strong>The Solution: Distributed Lock Service (e.g., ZooKeeper)</strong></p>
+        <ul>
+            <li>When Server A modifies an object in the cache, it grabs a "Lock" from the coordinator (ZooKeeper).</li>
+            <li>If Server B tries to read that object, the coordinator stops it.</li>
+            <li>The coordinator forces Server A to write its cache modifications back to the main database and release the lock.</li>
+            <li>Only then is Server B allowed to read the newly updated data.</li>
+        </ul>
+
+        <div class="note-box">
+            <strong>⚠️ The Tradeoff:</strong> Only one server can hold the lock at a time. This creates a bottleneck, ruining the ability to have high write-throughput from many simultaneous servers.
+        </div>
+
+        <h3>Caching in Practice</h3>
+        <p>In the real world, enterprise caches (like Redis) are treated exactly like databases. They require:</p>
+        <ul>
+            <li><strong>Replication:</strong> For fault tolerance (backups if a node dies).</li>
+            <li><strong>Partitioning:</strong> Splitting data up for massive datasets.</li>
+            <li><strong>Coordination Services:</strong> For cluster management.</li>
+        </ul>
+    </article>
+
+    <!-- SECTION 7 -->
+    <article class="card" style="border: 2px solid var(--accent);">
+        <h2>🎯 Conclusion & Summary</h2>
+        <ul>
+            <li><strong>Core Purpose:</strong> Caching improves read latency and protects databases from excessive load.</li>
+            <li><strong>Architecture:</strong> It is generally better to decouple cache from application servers (Global Cache) to allow independent scaling and fault tolerance.</li>
+            <li><strong>Write Strategy Cheat Sheet:</strong>
+                <ul>
+                    <li><span class="highlight">Write Back:</span> Minimal write latency, but eventual consistency (risk of data loss).</li>
+                    <li><span class="highlight">Write Through:</span> Maximum consistency, but high write latency.</li>
+                    <li><span class="highlight">Write Around:</span> Simple implementation, but causes an initial cache miss.</li>
+                </ul>
+            </li>
+        </ul>
+        <p style="text-align: center; margin-top: 30px; color: var(--text-muted);">End of Notes • Good luck studying! 🚀</p>
+    </article>
+
+</div>
+
+<script>
+    // Simple script to trigger fade-in animations slightly on scroll for a smoother feed experience
+    const observerOptions = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.animationPlayState = 'running';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, observerOptions);
+
+    document.querySelectorAll('.card').forEach(card => {
+        card.style.animationPlayState = 'paused';
+        observer.observe(card);
+    });
+</script>
+</body>
+</html>

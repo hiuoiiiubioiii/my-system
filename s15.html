@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Processing - Complete Lecture Notes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #f4f7f6;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --primary: #3182ce;
+            --secondary: #e2e8f0;
+            --accent: #dd6b20;
+            --card-bg: #ffffff;
+            --success: #38a169;
+            --danger: #e53e3e;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        /* Feed Container */
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Styling */
+        header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 3px solid var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Styling for Feed */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid var(--secondary);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            color: var(--text-main);
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.5rem 0;
+        }
+
+        p, ul {
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            background-color: #ebf8ff;
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+            font-weight: 500;
+        }
+
+        .callout.warning {
+            background-color: #fffaf0;
+            border-left-color: var(--accent);
+        }
+
+        /* --- VISUALIZATIONS (CSS-Based) --- */
+        
+        /* Flowchart Container */
+        .flowchart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .flow-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            text-align: center;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 6px;
+            border: 2px solid var(--primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            min-width: 140px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .flow-box.data { border-color: var(--text-muted); background: var(--secondary); }
+        .flow-box.action { border-color: var(--accent); background: #fffaf0;}
+        
+        .arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* Data Example Blocks */
+        .data-block {
+            background: #1a202c;
+            color: #a0aec0;
+            font-family: monospace;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+        .data-block span.key { color: #fbd38d; } /* Yellowish */
+        .data-block span.val { color: #9ae6b4; } /* Greenish */
+
+        /* Comparison Grid */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .compare-card {
+            background: var(--bg-color);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-top: 4px solid var(--danger);
+        }
+        
+        .compare-card.good {
+            border-top-color: var(--success);
+        }
+
+        @media (max-width: 600px) {
+            .compare-grid {
+                grid-template-columns: 1fr;
+            }
+            .flow-row {
+                flex-direction: column;
+            }
+            .arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <header>
+            <h1>Batch Processing</h1>
+            <p>Comprehensive Video Lecture Notes & Systems Design Concepts</p>
+        </header>
+
+        <!-- Section 1 -->
+        <div class="card">
+            <h2>1. Background & The Problem</h2>
+            <p>Most modern companies hold an immense volume of unstructured data about user activity and usage patterns. They need to run massive, long-running computations on this data to gain insights.</p>
+            
+            <h3>Why not just use a Data Warehouse?</h3>
+            <ul>
+                <li><strong>Structured Data Requirement:</strong> Data Warehouses require data to be pre-formatted and highly organized.</li>
+                <li><strong>The SQL Bottleneck:</strong> You are inherently limited by the SQL query language. You cannot easily run arbitrary, custom algorithms (like machine learning models) directly inside a traditional Data Warehouse.</li>
+            </ul>
+
+            <div class="callout">
+                <strong>💡 The Solution: Batch Processing</strong> <br>
+                Batch computing allows companies to dump tons of <em>unstructured data</em>, write arbitrary code to process it, and generate outputs. Examples include: Building search indexes, Machine Learning aggregations, and ETL (Extract, Transform, Load) pipelines.
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="card">
+            <h2>2. Distributed File Systems (DFS)</h2>
+            <p>To process massive data, you first need to store it. You can't fit petabytes of data on a single laptop hard drive.</p>
+            <ul>
+                <li>A Distributed File System acts exactly like a normal file system (folders, sub-folders, files), but it is spread across hundreds or thousands of different computers (nodes).</li>
+                <li><strong>Redundancy & Replication:</strong> Data is copied across multiple machines. If one node catches fire, your data is safe.</li>
+                <li><strong>Hadoop (HDFS):</strong> The industry-standard open-source version, originally based on the <em>Google File System</em>.</li>
+            </ul>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="card">
+            <h2>3. MapReduce: The Core Concept</h2>
+            <p>MapReduce is a simple programming model designed to run on top of Hadoop (HDFS). To use it, developers only need to write two functions: a <strong>Mapper</strong> and a <strong>Reducer</strong>.</p>
+            
+            <h3>Key Principles:</h3>
+            <ul>
+                <li><strong>Immutable Inputs:</strong> MapReduce never modifies your original files. It reads them and outputs brand new files.</li>
+                <li><strong>Data Locality (Crucial!):</strong> Moving data over a network is extremely slow and expensive. Instead, MapReduce <em>moves the code to the data</em>. Mapper functions are run directly on the physical node where the input file lives.</li>
+                <li><strong>Fault Tolerance:</strong> If a single server crashes (or the task is killed because the server is needed for higher-priority work), MapReduce only restarts that specific node's task, not the entire massive job.</li>
+            </ul>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="card">
+            <h2>4. MapReduce: Step-by-Step Visualization</h2>
+            <p>Here is exactly how data flows through a MapReduce job from start to finish.</p>
+
+            <div class="flowchart">
+                <div class="flow-row">
+                    <div class="flow-box data">1. Input Files (HDFS)</div>
+                    <div class="arrow">→</div>
+                    <div class="flow-box action">2. Mappers<br><small>Extract [Key, Value]</small></div>
+                </div>
+                <div class="flow-row" style="margin: 10px 0;">
+                    <div class="arrow">↓</div>
+                </div>
+                <div class="flow-row">
+                    <div class="flow-box action">3. Sort & Partition<br><small>Group by Hash(Key)</small></div>
+                    <div class="arrow">→</div>
+                    <div class="flow-box action">4. Reducers<br><small>Merge & Compute</small></div>
+                    <div class="arrow">→</div>
+                    <div class="flow-box data">5. Output Files</div>
+                </div>
+            </div>
+
+            <ul>
+                <li><strong>Step 1 & 2:</strong> The Mapper breaks the file into records and extracts a Key and a Value.</li>
+                <li><strong>Step 3 (Shuffle/Sort):</strong> A Hash Function is applied to the Key. This ensures that every record with the same exact Key gets sent to the exact same Reducer. Keys are sorted locally.</li>
+                <li><strong>Step 4:</strong> The Reducer receives the sorted data. Because all identical keys are grouped together sequentially, it requires very little RAM. It iterates over the values for one key, runs custom logic, and saves.</li>
+            </ul>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="card">
+            <h2>5. Joins in MapReduce</h2>
+            <p>Often, you need to associate data from two different input files. Doing this via a live database network call is too slow. Here are three ways MapReduce handles joins locally:</p>
+
+            <h3>A. Sort Merge Joins (Reduce-Side)</h3>
+            <p>Mappers process both large datasets. Because they use the same hash function, identical keys from both datasets are routed to the same Reducer, which merges them together.</p>
+            
+            <div class="data-block">
+                // Mapper 1 (Browser Data) & Mapper 2 (Age Data) output:<br>
+                <span class="key">jordan</span>: <span class="val">youtube.com</span><br>
+                <span class="key">jordan</span>: <span class="val">21</span><br><br>
+                // Reducer Merges them into:<br>
+                <span class="key">jordan</span>: <span class="val">youtube.com, 21</span>
+            </div>
+
+            <h3>B. Broadcast Hash Joins (Map-Side)</h3>
+            <p>Used when one dataset is massive, but the second dataset is <strong>tiny</strong>. You don't need a Reducer. The entire tiny dataset is loaded into the RAM (as a Hash Map) of every single Mapper. The join happens instantly on the Mapper node.</p>
+
+            <h3>C. Partitioned Hash Joins (Map-Side)</h3>
+            <p>If both datasets are too large for RAM, but they are <strong>partitioned the exact same way</strong> (e.g., all 'A' names are in partition 1 for both sets). The Mapper only loads the matching partition of the smaller dataset into memory, skipping the Reducer phase entirely.</p>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="card">
+            <h2>6. Pitfalls of MapReduce</h2>
+            <p>While revolutionary, MapReduce has significant performance flaws when chaining multiple jobs together (Job A → Job B → Job C).</p>
+
+            <div class="callout warning">
+                <strong>⚠️ The 3 Major Flaws:</strong>
+                <ol style="margin-top: 10px; margin-left: 1rem;">
+                    <li><strong>Stragglers:</strong> Job B cannot start until Job A is 100% finished. If one node in Job A is slow/glitchy, the entire pipeline is frozen waiting for that one "straggler".</li>
+                    <li><strong>Materialized Intermediate State (Disk I/O):</strong> MapReduce writes the output of every single job to the physical hard drive (Disk). Writing to Disk is incredibly slow and a massive waste of resources if those files are only being used to pass data to the next job.</li>
+                    <li><strong>Unnecessary Sorting:</strong> MapReduce <em>always</em> sorts keys. If Job B doesn't actually need sorted data, the system wastes massive CPU power doing it anyway.</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Section 7 -->
+        <div class="card">
+            <h2>7. DataFlow Engines (Apache Spark)</h2>
+            <p>To solve the pitfalls of MapReduce, the industry created modern DataFlow engines like <strong>Apache Spark</strong>. Instead of isolated mappers and reducers, Spark uses "Operators".</p>
+
+            <div class="compare-grid">
+                <div class="compare-card">
+                    <h3 style="margin-top: 0; color: var(--danger);">Legacy MapReduce</h3>
+                    <p>Treats every job as a black box. Reads from disk, processes, writes to disk. Slow and requires heavy I/O operations.</p>
+                </div>
+                <div class="compare-card good">
+                    <h3 style="margin-top: 0; color: var(--success);">Modern Spark</h3>
+                    <p>Understands the entire data flow from beginning to end before executing. Maximizes data locality and optimizes operations perfectly.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 2rem;">Why Spark is Superior:</h3>
+            <ul>
+                <li><strong>In-Memory Processing:</strong> Spark does <em>not</em> write intermediate states to disk. It keeps the data flowing in RAM (memory), making it exponentially faster.</li>
+                <li><strong>Fault Tolerance Trade-off:</strong> Because data is kept in RAM, a server crash wipes the data. MapReduce could just read the hard drive, but Spark handles crashes by <strong>recomputing</strong> the lost data from the last checkpoint.</li>
+                <li><strong>Deterministic Requirement:</strong> Because Spark relies on recomputing data upon failure, your functions <em>must</em> be deterministic (the same input must always yield the exact same output, without time-based randomness).</li>
+            </ul>
+        </div>
+
+        <!-- Section 8 -->
+        <div class="card" style="margin-bottom: 4rem;">
+            <h2>8. Conclusion & Next Steps</h2>
+            <p>Batch processing is fundamentally about taking unformatted data on a Distributed File System and transforming it to find insights. Dataflow engines like Spark have proven vastly superior to MapReduce by keeping data in memory and avoiding unnecessary disk writes and sorting.</p>
+            
+            <div class="callout" style="background-color: #f0fff4; border-left-color: var(--success);">
+                <strong>⏭️ Coming Up Next: Stream Processing</strong><br>
+                Batch processing works on a <strong>bound set of data</strong> (data with a specific start and end file). The next lecture will cover Stream Processing, which performs computations on data continuously as it flows in (unbound data)!
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

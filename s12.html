@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linearizability and Ordering | Study Feed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent: #bb86fc;
+            --accent-hover: #9965f4;
+            --danger: #cf6679;
+            --success: #03dac6;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding-bottom: 100px;
+        }
+
+        /* Layout */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding: 2rem 0;
+            border-bottom: 1px solid #333;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .instructor-note {
+            background-color: rgba(187, 134, 252, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            font-style: italic;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Cards / Sections */
+        .topic-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2.5rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .topic-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .topic-card h2 {
+            color: var(--accent);
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid #333;
+            padding-bottom: 0.5rem;
+        }
+
+        .topic-card h3 {
+            color: #fff;
+            margin: 1.5rem 0 1rem 0;
+            font-size: 1.3rem;
+        }
+
+        ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .warning-box {
+            background-color: rgba(207, 102, 121, 0.1);
+            border: 1px solid var(--danger);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+
+        .warning-box strong {
+            color: var(--danger);
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background-color: #252525;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 2rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid #333;
+        }
+
+        /* Order Box Visuals */
+        .order-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+
+        .node-box {
+            background-color: #333;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .arrow {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .partial-tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .branch-row {
+            display: flex;
+            gap: 30px;
+        }
+
+        /* Lamport Timeline Visual */
+        .lamport-grid {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 20px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .lamport-entities {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .db-icon {
+            font-size: 2rem;
+            text-align: center;
+        }
+
+        .lamport-timeline {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border-left: 2px dashed #444;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .lamport-event {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .lamport-event::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 50%;
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent);
+            border-radius: 50%;
+            transform: translateY(-50%);
+        }
+
+        .event-tuple {
+            background-color: var(--accent);
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .event-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Tradeoff Table */
+        .tradeoff-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        .tradeoff-table th, .tradeoff-table td {
+            border: 1px solid #444;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        .tradeoff-table th {
+            background-color: #333;
+            color: var(--accent);
+        }
+
+        /* TOB Log */
+        .tob-log {
+            display: flex;
+            gap: 5px;
+            background: #111;
+            padding: 10px;
+            border-radius: 8px;
+            overflow-x: auto;
+            border: 1px solid #444;
+        }
+
+        .log-entry {
+            background: #333;
+            padding: 10px 15px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-family: monospace;
+            border-left: 3px solid var(--success);
+        }
+        
+        .log-entry.rejected {
+            border-left: 3px solid var(--danger);
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        <header>
+            <h1>Linearizability and Ordering</h1>
+            <p>A deep dive into Strong Consistency, Lamport Timestamps, and Total Order Broadcast.</p>
+        </header>
+
+        <div class="instructor-note">
+            <strong>Instructor's Prelude:</strong> "Before we begin, no I didn't pull strings—I'm a software engineer at Google, I got here through Leetcode like everyone else. Also, I only have 37 subscribers! Subscribe before I turn into a generic 'Day in the Life' tech channel." 
+        </div>
+
+        <article class="topic-card">
+            <h2>1. What is Linearizability?</h2>
+            <p>In distributed systems, <strong>Linearizability</strong> is synonymous with <strong>Strong Consistency</strong>.</p>
+            <p>Once a write is successfully committed to <em>any</em> single replica for a given object, all subsequent reads (regardless of which replica they hit) will show the results of that write.</p>
+            <ul>
+                <li><strong>No stale reads:</strong> Users will never see an outdated version of an object after a write completes.</li>
+                <li><strong>The Single Copy Illusion:</strong> To a user, the distributed database behaves exactly as if there is only one central copy of the data.</li>
+            </ul>
+
+            <div class="warning-box">
+                <strong>Crucial Distinction:</strong> Do not confuse Linearizability with <em>Serializability</em>. 
+                <br><br>
+                <strong>Linearizability</strong> is a guarantee about a single object (recency/stale reads).<br>
+                <strong>Serializability</strong> is a database transaction concept guaranteeing operations across multiple objects prevent race conditions. It has nothing to do with transactions!
+            </div>
+        </article>
+
+        <article class="topic-card">
+            <h2>2. When is Linearizability Useful?</h2>
+            <p>You need linearizability when your system absolutely requires just <strong>ONE</strong> absolute truth of something.</p>
+            <ul>
+                <li><strong>Distributed Locks:</strong> Only one node can hold a lock at a time. If a node reads a stale state saying a lock is free when it isn't, catastrophe ensues.</li>
+                <li><strong>Uniqueness Constraints:</strong> Imagine claiming a username in a database. If you and a friend concurrently try to claim <span class="highlight">"goldenshowerlover100"</span> on different replicas, strong consistency ensures only one person gets it, and no subsequent writes for that username succeed.</li>
+            </ul>
+            
+            <h3>Pros and Cons</h3>
+            <ul>
+                <li><span class="highlight">Pros:</span> Always up-to-date results. The developer logic is much simpler.</li>
+                <li><strong style="color: var(--danger)">Cons:</strong> Huge performance hit. Implementing this requires network consensus, which adds massive latency.</li>
+            </ul>
+        </article>
+
+        <article class="topic-card">
+            <h2>3. Ordering: Total vs. Partial</h2>
+            <p>If we want to act as if there is only one copy of data, there must be a <strong>Total Order</strong> of operations. The state of the database must be expressible by executing operations one at a time in a sequence that all replicas agree upon.</p>
+            <p>This order preserves <strong>causality</strong> (if A happens before B, A is before B in the order). If A and B are concurrent, their relative order doesn't matter, but <em>every replica must apply them in the exact same order</em>.</p>
+
+            <div class="viz-container">
+                <h4 style="margin-bottom: 1rem;">Total Order (Strict Sequence)</h4>
+                <div class="order-row">
+                    <div class="node-box">A</div>
+                    <div class="arrow">&lt;</div>
+                    <div class="node-box">B</div>
+                    <div class="arrow">&lt;</div>
+                    <div class="node-box">C</div>
+                    <div class="arrow">&lt;</div>
+                    <div class="node-box">D</div>
+                    <div class="arrow">&lt;</div>
+                    <div class="node-box">E</div>
+                </div>
+
+                <h4 style="margin-top: 2rem; margin-bottom: 1rem;">Partial Order (Branching/Concurrent)</h4>
+                <p style="font-size: 0.9rem; color: var(--text-muted); text-align: center; margin-bottom: 1rem;">Expresses causality, but leaves concurrent events un-ordered.</p>
+                <div class="partial-tree">
+                    <div class="branch-row">
+                        <div class="node-box">A</div>
+                        <div class="node-box">B</div>
+                    </div>
+                    <div class="arrow">⬇</div>
+                    <div class="node-box">C</div>
+                    <div class="arrow">⬇</div>
+                    <div class="branch-row">
+                        <div class="node-box">D</div>
+                        <div class="node-box">E</div>
+                    </div>
+                </div>
+            </div>
+            
+            <p><strong>The problem with Partial Order:</strong> If replicas don't force a total order on concurrent events, Replica 1 might process <code>A then B</code>, while Replica 2 processes <code>B then A</code>. This leads to inconsistent data.</p>
+        </article>
+
+        <article class="topic-card">
+            <h2>4. How to Create an Ordering</h2>
+            <ul>
+                <li><strong>Single Leader Replication:</strong> The leader's Write-Ahead Log (WAL) does this natively.</li>
+                <li><strong>Leaderless / Multi-leader:</strong> Because writes enter from anywhere, we need specific tools. <em>Version Vectors</em> work but take O(n) space. The alternative is <strong>Lamport Timestamps</strong>.</li>
+            </ul>
+
+            <h3>Deep Dive: Lamport Timestamps</h3>
+            <p>A Lamport Timestamp provides a total order using a simple tuple: <span class="highlight">(Counter, NodeId)</span>.</p>
+            
+            <div class="viz-container">
+                <p style="margin-bottom: 1rem; text-align: center;"><strong>Rule:</strong> Nodes track the highest counter they've seen. If they see a higher one during an interaction, they skip to that number. NodeId breaks ties.</p>
+                <div class="lamport-grid">
+                    <div class="lamport-entities">
+                        <div class="db-icon">💻<br><span style="font-size: 0.8rem">Node 1</span></div>
+                        <div class="db-icon">🗄️<br><span style="font-size: 0.8rem">Node 2</span></div>
+                    </div>
+                    <div class="lamport-timeline">
+                        <div class="lamport-event">
+                            <div class="event-tuple">(1, 1)</div>
+                            <div class="event-desc">Node 1 initiates a write.</div>
+                        </div>
+                        <div class="lamport-event">
+                            <div class="event-tuple">(1, 2)</div>
+                            <div class="event-desc">Node 2 initiates concurrent write.</div>
+                        </div>
+                        <div class="lamport-event">
+                            <div class="event-tuple">(2, 2)</div>
+                            <div class="event-desc">Node 2 writes again (increments).</div>
+                        </div>
+                        <div class="lamport-event">
+                            <div class="event-tuple">(3, 2)</div>
+                            <div class="event-desc">Node 2 writes again (increments).</div>
+                        </div>
+                        <div class="lamport-event">
+                            <div class="event-tuple">(4, 2)</div>
+                            <div class="event-desc">Node 1 interacts with Node 2, sees counter=3. It updates to 3, increments for its write -> 4.</div>
+                        </div>
+                        <div class="lamport-event">
+                            <div class="event-tuple">(5, 1)</div>
+                            <div class="event-desc">Node 1 writes to itself, counter becomes 5.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p><strong>Final Total Order (sorted by Counter, then NodeId):</strong><br>
+            (1, 1) → (1, 2) → (2, 2) → (3, 2) → (4, 2) → (5, 1)</p>
+        </article>
+
+        <article class="topic-card">
+            <h2>5. Lamport Timestamps: Tradeoffs & Pitfalls</h2>
+            
+            <table class="tradeoff-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Lamport Timestamps</th>
+                        <th>Version Vectors</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Space Complexity</strong></td>
+                        <td><span class="highlight">O(1)</span> - Just two numbers.</td>
+                        <td>O(n) - Scales with number of nodes.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Concurrency</strong></td>
+                        <td>Forces Total Order. Cannot tell if events were concurrent.</td>
+                        <td>Expresses Partial Order. Can identify concurrent siblings.</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Loss / Merging</strong></td>
+                        <td>Arbitrary tie-breaking leads to silent data loss. No custom merging.</td>
+                        <td>Allows custom merging logic for concurrent edits.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>The Retroactive Pitfall</h3>
+            <p>Lamport Timestamps provide a total order, but they only give us this order <strong>retroactively</strong>. They are insufficient for real-time linearizability.</p>
+            <div class="warning-box">
+                <strong>Example:</strong> You and a friend concurrently write a claim for username <code>fupa_sniffer_21</code> to different replicas. Both replicas accept it and return a "Success" message to both users immediately.<br><br>
+                Only later, when replicas sync and compare Lamport Timestamps, is the tie broken. One user's "successful" write is quietly rolled back. You didn't get real-time strong consistency.
+            </div>
+        </article>
+
+        <article class="topic-card">
+            <h2>6. Total Order Broadcast (TOB)</h2>
+            <p>To fix the retroactive ordering problem, replicas must receive operations in the correct order <em>as they happen</em>. This requires a protocol called <strong>Total Order Broadcast</strong>.</p>
+            
+            <ul>
+                <li><strong>Reliable Delivery:</strong> Messages are delivered to every node without being lost (requires constant retries).</li>
+                <li><strong>Ordered Delivery:</strong> Messages are delivered in the exact same sequence to every single node.</li>
+            </ul>
+
+            <div class="viz-container">
+                <h4 style="margin-bottom: 1rem;">Replicated Log via TOB</h4>
+                <div class="tob-log">
+                    <div class="log-entry">Write: Claim User X (Node A)</div>
+                    <div class="log-entry rejected">Write: Claim User X (Node B) [REJECTED]</div>
+                    <div class="log-entry">Read: Get User X</div>
+                    <div class="log-entry">Write: Update User X settings</div>
+                </div>
+                <p style="font-size: 0.85rem; margin-top: 1rem; color: var(--text-muted)">Because all nodes process this log strictly left-to-right, the second concurrent claim is naturally rejected. No retroactive rollbacks needed.</p>
+            </div>
+
+            <h3>Achieving Linearizability with TOB</h3>
+            <ul>
+                <li><strong>Writes:</strong> Append to the log. Replicas perform writes strictly in log order. (First username claim wins, subsequent ones in the log error out).</li>
+                <li><strong>Reads:</strong> To ensure reads aren't stale, you must <em>also append reads to the log</em>. The database only returns the value to the user when it reaches that read request in the log, ensuring all prior writes are processed.</li>
+            </ul>
+        </article>
+
+        <article class="topic-card">
+            <h2>7. Summary & The Consensus Problem</h2>
+            <p>While TOB can create linearizable storage, and linearizable storage can create TOB, <em>how do we actually build these?</em></p>
+            <p>Ultimately, doing this requires solving the <strong>Consensus Problem</strong> (getting independent, unreliable nodes to agree on a single state/order). This requires complex algorithms like Paxos or Raft.</p>
+
+            <div class="warning-box" style="border-color: var(--success); background-color: rgba(3, 218, 198, 0.1);">
+                <strong style="color: var(--success)">Final Takeaway:</strong> 
+                Linearizability acts as if there is only one copy of data. Ordering is easy with a single leader, but requires tools like Lamport timestamps otherwise. Because Lamport timestamps are retroactive, we need Total Order Broadcast for real-time consistency.<br><br>
+                <strong>If you can avoid having to deal with strong consistency, eventual consistency often suffices and takes a far lesser toll on performance.</strong>
+            </div>
+        </article>
+
+    </div>
+
+    <script>
+        // Intersection Observer for scroll animations
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.topic-card');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // Trigger when 15% of the card is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target); // Only animate once
+                    }
+                });
+            }, observerOptions);
+
+            cards.forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

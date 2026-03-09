@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoltDB Study Notes | System Design</title>
+    <style>
+        /* Base Variables & Theme */
+        :root {
+            --bg-color: #f4f7f6;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --accent-blue: #3182ce;
+            --bg-blue: #ebf8ff;
+            --accent-green: #38a169;
+            --bg-green: #f0fff4;
+            --accent-purple: #805ad5;
+            --bg-purple: #faf5ff;
+            --accent-orange: #dd6b20;
+            --bg-orange: #fffff0;
+            --card-bg: #ffffff;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* Vertical Feed Layout */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #1a202c;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Styling */
+        .topic-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .topic-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #edf2f7;
+        }
+
+        .topic-header h2 {
+            font-size: 1.5rem;
+            color: #2d3748;
+        }
+
+        .timestamp {
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+
+        /* Note Types */
+        .slide-content {
+            background-color: var(--bg-blue);
+            border-left: 4px solid var(--accent-blue);
+            padding: 15px 20px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            margin-bottom: 20px;
+        }
+
+        .slide-content::before {
+            content: '📺 From the Slide:';
+            display: block;
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .instructor-notes {
+            background-color: var(--bg-green);
+            border-left: 4px solid var(--accent-green);
+            padding: 15px 20px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        }
+
+        .instructor-notes::before {
+            content: '🗣️ Instructor\'s Explanation:';
+            display: block;
+            font-weight: bold;
+            color: var(--accent-green);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: #1a202c;
+        }
+
+        /* Visualizations (CSS Diagrams) */
+        .viz-container {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+
+        .viz-title {
+            text-align: center;
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        /* Specific Diagram Layouts */
+        .flex-diagram {
+            display: flex;
+            justify-content: space-around;
+            align-items: stretch;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .viz-box {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 2px solid #cbd5e0;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .viz-box.bad { border-color: #fc8181; background: #fff5f5; }
+        .viz-box.good { border-color: #68d391; background: #f0fff4; }
+
+        .arrow {
+            font-size: 1.5rem;
+            color: #a0aec0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .queue-block {
+            display: inline-block;
+            background: var(--accent-purple);
+            color: white;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        /* Takeaway Box */
+        .takeaway-box {
+            background: var(--bg-purple);
+            border: 2px solid var(--accent-purple);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .takeaway-box h3 {
+            color: var(--accent-purple);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <header>
+            <h1>📚 VoltDB Study Notes</h1>
+            <p>Complete breakdown of NewSQL, Single-Threaded Execution, and In-Memory Data Storage</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">0:34</span>
+                <h2>1. Background & Context</h2>
+            </div>
+            
+            <div class="slide-content">
+                <p>VoltDB is another example of a <strong>NewSQL database</strong> that uses a variety of optimizations in order to try to gain performance increases over traditional solutions such as MySQL or PostgreSQL.</p>
+            </div>
+
+            <div class="instructor-notes">
+                <p>VoltDB is primarily interesting as a case study in <strong>transaction serializability</strong>. It takes a highly unconventional, contrarian approach to serializability to optimize its performance compared to traditional relational databases.</p>
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">0:56</span>
+                <h2>2. Design Philosophy: Abandoning Locks</h2>
+            </div>
+            
+            <div class="slide-content">
+                <ul>
+                    <li><strong>Recall:</strong> Traditional SQL databases use two-phase locking in order to implement transaction serializability, which leads to slow throughput (due to locking overhead) and deadlocks.</li>
+                    <li><strong>Instead:</strong> VoltDB has chosen to use actual <em>serial execution</em>. Each database instance actually executes every operation in a single-threaded manner, hence no locks are needed!</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: Traditional vs. VoltDB Execution</div>
+                <div class="flex-diagram">
+                    <div class="viz-box bad">
+                        <strong>Traditional DB (2-Phase Locking)</strong><br><br>
+                        Thread 1 ➔ 🔒 Grabs Lock A<br>
+                        Thread 2 ➔ ⏳ Waits for Lock A<br>
+                        <em>Result: Overhead, Blocking, Deadlocks</em>
+                    </div>
+                    <div class="viz-box good">
+                        <strong>VoltDB (Single-Threaded)</strong><br><br>
+                        Queue: <span class="queue-block">T3</span> <span class="queue-block">T2</span> <span class="queue-block">T1</span> ➔ ⚙️ CPU<br>
+                        <em>Result: One at a time. Zero locks. Zero deadlocks.</em>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <p><strong>The Problem with Traditional DBs:</strong> Traditional databases use "two-phase locking." This involves grabbing shared and exclusive locks on individual rows for reading and writing. This creates massive overhead. Transactions wait for each other, and it frequently leads to "deadlocks" (causing both queries to freeze).</p>
+                <p><strong>The VoltDB Solution:</strong> Throw away locks entirely. Put all read and write transactions into a single queue. The CPU executes them one by one, in serial order. Because only one transaction is happening at any exact given microsecond, conflicts and deadlocks are impossible.</p>
+            </div>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">1:44</span>
+                <h2>3. Supporting Single-Threaded Execution</h2>
+            </div>
+            
+            <div class="slide-content">
+                <p>In order to ensure that each database node is capable of running each operation as fast as possible (in order to avoid bottlenecks), VoltDB does the following:</p>
+                <ul>
+                    <li>All data stored in <strong>memory</strong></li>
+                    <li>Transactions must first be stored as <strong>stored procedures</strong></li>
+                </ul>
+            </div>
+
+            <div class="instructor-notes">
+                <p><strong>The Catch:</strong> If you took a standard MySQL database and forced it to run on a single thread, it would be incredibly slow. For single-threaded execution to be a benefit rather than a bottleneck, the individual operations must execute <em>blisteringly fast</em>.</p>
+                <p>Therefore, VoltDB had to make two massive architectural changes: relying completely on RAM (memory) to eliminate disk wait times, and using Java stored procedures to eliminate network wait times.</p>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">2:28</span>
+                <h2>4. Storing Data in Memory & Durability</h2>
+            </div>
+            
+            <div class="slide-content">
+                <ul>
+                    <li>Storing data in memory eliminates disk stalls (no overhead moving pages from disk to page cache).</li>
+                    <li><strong>Command Log</strong> in conjunction with occasional snapshot ensures durability.
+                        <ul>
+                            <li>Similar to a Write-Ahead Log (WAL), but has lower overhead because it describes the <em>transaction instructions</em> themselves instead of the result.</li>
+                            <li>Assuming the command log is updated synchronously, writes can be lost if updated concurrently with memory.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: Command Log vs Traditional WAL</div>
+                <div class="flex-diagram">
+                    <div class="viz-box">
+                        <strong>Traditional WAL</strong><br><br>
+                        App ➔ DB ➔ Calculates Result ➔<br> 💾 <em>Writes exact final data rows to disk</em>
+                    </div>
+                    <div class="viz-box" style="border-color: var(--accent-blue); background: var(--bg-blue);">
+                        <strong>VoltDB Command Log</strong><br><br>
+                        App ➔ DB ➔ <br> 💾 <em>Writes just the code/instructions to disk</em> ➔ Executes in RAM
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <p><strong>Why RAM?</strong> Disk I/O is the slowest part of a database. By storing everything in RAM, the database never pauses to fetch data from a hard drive.</p>
+                <p><strong>Durability (Preventing data loss):</strong> If RAM loses power, data is erased. To prevent this, VoltDB uses a Command Log. Instead of saving the <em>results</em> of a query to disk (like a traditional WAL), it saves the <em>instructions</em> (the code itself). This requires writing much less data to the disk.</p>
+                <p><strong>Synchronous vs. Asynchronous:</strong> If done synchronously (disk write happens before RAM update), data is safe but slightly slower. If done asynchronously, a sudden crash could cause a write to be lost before hitting the disk.</p>
+            </div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">4:12</span>
+                <h2>5. Eliminating User Stalls via Stored Procedures</h2>
+            </div>
+            
+            <div class="slide-content">
+                <ul>
+                    <li>Using stored procedures eliminates <strong>user stalls</strong>.</li>
+                    <li>Stalls occur in a read-modify-write transaction when an app reads data, calculates logic, and sends an update. This adds network latency.</li>
+                    <li>Sending a single stored procedure ensures that all time spent in the transaction is just CPU cycles, not network latency.</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: The "User Stall" Problem</div>
+                <div class="flex-diagram">
+                    <div class="viz-box bad">
+                        <strong>Standard DB (User Stall)</strong><br>
+                        App ➔ <em>"Get Balance"</em> ➔ DB<br>
+                        DB ➔ <em>"Balance is $100"</em> ➔ App<br>
+                        App ➔ <em>"Set Balance to $50"</em> ➔ DB<br>
+                        <em>(Database halts entirely while waiting for network trips)</em>
+                    </div>
+                    <div class="viz-box good">
+                        <strong>VoltDB (Stored Procedure)</strong><br>
+                        App ➔ <em>Sends Java Code Block</em> ➔ DB<br>
+                        DB ➔ <em>Executes everything internally instantly</em> ➔ App<br>
+                        <em>(Zero network waiting during execution)</em>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <p><strong>The Core Issue:</strong> In a single-threaded DB, if the database has to wait for data to travel over the internet to the application and back, the <em>entire system freezes</em>. This network latency would destroy performance.</p>
+                <p><strong>The Solution:</strong> VoltDB uses Stored Procedures written in Java. Instead of sending data back and forth, the application sends the logic (the code) to the database upfront. The database executes the entire read-modify-write logic internally, taking only pure CPU calculation time.</p>
+            </div>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">5:49</span>
+                <h2>6. Partitioning and Replication</h2>
+            </div>
+            
+            <div class="slide-content">
+                <ul>
+                    <li>Because data is in RAM, datasets will inevitably need to be <strong>sharded</strong>.</li>
+                    <li>Transactions that reach multiple shards use one node as a <strong>coordinator node</strong>.</li>
+                    <li><strong>Small Table Optimization:</strong> Keep small, frequently joined tables whole and store them on every node.</li>
+                    <li><strong>Multi-Leader Replication:</strong> For cross-datacenter conflicts:
+                        <ol>
+                            <li>Deletes take precedence over inserts/updates.</li>
+                            <li>If two conflicting updates occur, Last Write Wins (LWW) is used.</li>
+                        </ol>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="instructor-notes">
+                <p><strong>Sharding is mandatory:</strong> RAM is limited compared to disks, so large datasets must be split across machines. You ideally want a transaction to only need data from one shard to avoid network latency.</p>
+                <p><strong>The "Small Table" Trick:</strong> If you have a small table (like a list of zip codes) that is constantly joined with larger tables, do not shard it. Copy that entire small table to <em>every single node</em>. This prevents slow network joins across shards.</p>
+                <p><strong>Conflict Resolution:</strong> In multi-leader setups (e.g., across multiple data centers), conflicts happen. VoltDB has strict, simple rules: A Delete will always overwrite an Update. If it's two Updates, the one with the latest timestamp wins (Last Write Wins).</p>
+            </div>
+        </article>
+
+        <!-- Conclusion -->
+        <article class="topic-card">
+            <div class="topic-header">
+                <span class="timestamp">8:03</span>
+                <h2>7. Conclusion & Interview Utility</h2>
+            </div>
+            
+            <div class="slide-content">
+                <p>By removing locks, VoltDB is able to achieve extremely high performance, even more so than in-memory key-value stores. While VoltDB itself isn’t overly useful for system design interviews, it is a great case study in how actual just using a single-threaded database can be feasible under certain circumstances.</p>
+            </div>
+
+            <div class="instructor-notes">
+                <p>The instructor contrasts VoltDB with Google Spanner. Spanner uses locking, which makes massive read-only queries very inefficient due to the overhead of grabbing locks on thousands of rows. VoltDB proves that an unfamiliar design—putting everything in RAM, using stored procedures, and running a single thread—can completely eliminate lock and network wait times.</p>
+            </div>
+
+            <div class="takeaway-box">
+                <h3>💡 Exam / System Design Takeaway</h3>
+                <p>If asked about database locking, deadlocks, or 2-phase commits, use VoltDB as a contrarian example: <em>"While traditional DBs handle concurrency via two-phase locking, systems like VoltDB achieve extreme performance by moving all data to memory, eliminating locks entirely, and forcing single-threaded execution via stored procedures to bypass network latency."</em></p>
+            </div>
+        </article>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Design Notes: Load Balancers</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --card-bg: #2d2d2d;
+            --text-primary: #f0f0f0;
+            --text-secondary: #aaaaaa;
+            --accent-green: #00ff00;
+            --accent-blue: #4fa8ff;
+            --border-color: #444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        /* Feed Layout Constraints */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        /* Typography */
+        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; text-align: center; }
+        h2 { font-size: 1.8rem; margin-bottom: 1rem; color: var(--text-primary); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        h3 { font-size: 1.3rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: var(--accent-blue); }
+        p, li { font-size: 1.1rem; color: var(--text-secondary); margin-bottom: 1rem; }
+        ul { padding-left: 1.5rem; margin-bottom: 1rem; }
+        strong { color: var(--text-primary); }
+
+        /* Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .instructor-note {
+            background-color: rgba(79, 168, 255, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+        }
+
+        /* Custom Visualizations */
+        .diagram {
+            background: #1a1a1a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .diagram-box {
+            background: #444;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            min-width: 100px;
+        }
+
+        .diagram-lb {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .diagram-arrow {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+        }
+
+        .cluster {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .server-node {
+            background: #555;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        /* Heartbeat Animation */
+        .heartbeat-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .pulse {
+            width: 15px;
+            height: 15px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+            75%, 100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media(max-width: 600px) {
+            .comparison-grid { grid-template-columns: 1fr; }
+            .diagram { flex-direction: column; }
+            .diagram-arrow { transform: rotate(90deg); }
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            background: #444;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <!-- HEADER -->
+        <header style="margin-bottom: 2rem;">
+            <h1>System Design: Load Balancers</h1>
+            <p style="text-align: center;">Comprehensive study notes extracted from video lecture & slides.</p>
+        </header>
+
+        <!-- SECTION 1: BACKGROUND -->
+        <section class="card">
+            <h2>1. Background & The Scaling Problem</h2>
+            <p>As systems scale, they inevitably hit limits. The instructor notes that a single server, no matter how powerful, will crash under the weight of millions of users.</p>
+            <ul>
+                <li><strong>Vertical Scaling:</strong> Upgrading to more powerful hardware (better CPU/RAM). Eventually hits a physical and financial limit.</li>
+                <li><strong>Horizontal Scaling:</strong> Adding more nodes/servers to a cluster. Commonly seen in databases (partitioning/replication) and application servers (especially in Microservice architectures).</li>
+            </ul>
+            <div class="instructor-note">
+                <strong>Instructor's Core Rule:</strong> "Anytime there is a variety of nodes in a cluster that can serve the same requests, using a Load Balancer ensures none of the servers become overwhelmed."
+            </div>
+        </section>
+
+        <!-- SECTION 2: ARCHITECTURE -->
+        <section class="card">
+            <h2>2. Architecture: Where Do They Live?</h2>
+            <p>Load balancers are a type of <strong>reverse proxy</strong>. They don't just sit between the user and your web servers; they can sit between <em>any</em> two layers of your application to distribute traffic.</p>
+            
+            <div class="diagram">
+                <div class="diagram-box" style="border-radius: 20px;">📱 Client</div>
+                <div class="diagram-arrow">➔</div>
+                <div class="diagram-box diagram-lb">Load Balancer</div>
+                <div class="diagram-arrow">➔</div>
+                <div class="cluster">
+                    <div class="server-node">🖥️ App Server 1</div>
+                    <div class="server-node">🖥️ App Server 2</div>
+                    <div class="server-node">🖥️ App Server 3</div>
+                </div>
+                <div class="diagram-arrow">➔</div>
+                <div class="diagram-box diagram-lb">Load Balancer</div>
+                <div class="diagram-arrow">➔</div>
+                <div class="cluster">
+                    <div class="server-node">🛢️ DB Replica 1</div>
+                    <div class="server-node">🛢️ DB Replica 2</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: HOW THEY WORK -->
+        <section class="card">
+            <h2>3. Load Balancing Overview & Heartbeats</h2>
+            <p>To distribute traffic safely, the load balancer needs to know which servers are healthy. It does this by locally keeping state via <strong>heartbeats</strong>.</p>
+            
+            <div class="heartbeat-container">
+                <div class="diagram-box diagram-lb">Load Balancer</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="color: var(--text-secondary); font-size: 0.9rem;">Ping</span>
+                    <div class="pulse"></div>
+                </div>
+                <div class="server-node">🖥️ App Server</div>
+            </div>
+
+            <ul>
+                <li><strong>What it tracks:</strong> Number of open connections, current CPU/Memory Load, and the time of the last heartbeat.</li>
+                <li><strong>Local vs. External:</strong> This state is kept <em>locally</em> on the load balancer. If it had to query an external coordination service (like Zookeeper) for every single user request, the network delay would create a massive performance bottleneck.</li>
+            </ul>
+        </section>
+
+        <!-- SECTION 4: ROUTING POLICIES -->
+        <section class="card">
+            <h2>4. Routing Policies (Algorithms)</h2>
+            <p>Once the load balancer knows who is healthy, it uses an algorithm to decide where to send the user.</p>
+            
+            <h3>Least Connections</h3>
+            <p>Traffic is routed to the server with the fewest active, open TCP connections. Simple and effective for long-lived connections.</p>
+
+            <h3>Least Response Time</h3>
+            <p>The LB tracks historical data on how fast each server responds. Traffic goes to the fastest responding server (implying it currently has the lowest load).</p>
+
+            <h3>(Weighted) Round Robin</h3>
+            <p>Standard Round Robin goes down the line (A ➔ B ➔ C ➔ A). <strong>Weighted</strong> Round Robin accounts for hardware differences. If Server A is twice as powerful as Server B, the LB sends two requests to A for every one request sent to B.</p>
+
+            <h3>Hashing</h3>
+            <p>Routes based on the actual contents of the request (e.g., User ID). <em>(See Section 6 for in-depth details).</em></p>
+        </section>
+
+        <!-- SECTION 5: LAYER 4 vs LAYER 7 -->
+        <section class="card">
+            <h2>5. Layer 4 vs. Layer 7 Routing</h2>
+            <p>Load balancers can operate at different layers of the OSI model, affecting speed and flexibility.</p>
+            
+            <div class="comparison-grid">
+                <div class="diagram-box" style="background: #333; text-align: left;">
+                    <h3 style="margin-top: 0; text-align: center;">Layer 4 (Transport)</h3>
+                    <ul>
+                        <li>Routes based on low-level network details (Source IP, Destination IP, Ports).</li>
+                        <li><strong>Pros:</strong> Computationally much faster.</li>
+                        <li><strong>Cons:</strong> Blind to the actual data inside the packet.</li>
+                    </ul>
+                </div>
+                <div class="diagram-box" style="background: #333; text-align: left;">
+                    <h3 style="margin-top: 0; text-align: center;">Layer 7 (Application)</h3>
+                    <ul>
+                        <li>Routes based on header contents (HTTP paths, cookies, application data).</li>
+                        <li><strong>Pros:</strong> Massive flexibility. Allows for smart hashing.</li>
+                        <li><strong>Cons:</strong> Requires more CPU to "unpack" and read the data.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: CONSISTENT HASHING -->
+        <section class="card">
+            <h2>6. Consistent Hashing & Cache Locality</h2>
+            <p>When using the "Hashing" routing policy, you should <strong>never</strong> use a simple modulus (e.g., Hash(ID) % Servers). If a server dies, the denominator changes, mathematically reshuffling every routing path and crashing the system.</p>
+            
+            <div class="instructor-note">
+                <strong>Instructor's Deep Dive: Cache Locality</strong><br>
+                Consistent Hashing ensures that a specific user (or data type) is routed to the <em>same node</em> every time. Why? Because that node can save (cache) the user's data (like DB queries or profile pictures) locally. This eliminates redundant database queries and massively speeds up the system.
+            </div>
+            <ul>
+                <li><strong>Consistent Hashing Algorithm:</strong> Distributes items into buckets on a hash ring so that adding/removing a server only shifts a tiny fraction of the items, avoiding network panic.</li>
+            </ul>
+        </section>
+
+        <!-- SECTION 7: AVAILABILITY -->
+        <section class="card">
+            <h2>7. Availability (Fixing the SPOF)</h2>
+            <p>A single load balancer is a <strong>Single Point of Failure (SPOF)</strong>. If it dies, your whole application is unreachable, no matter how many backend servers you have. You must implement redundancy.</p>
+            
+            <h3>Active-Active Setup</h3>
+            <p>Two (or more) load balancers route traffic simultaneously. They share configuration states via network-attached storage.</p>
+            <p><em>Warning:</em> If one goes down, the remaining LB suddenly absorbs 100% of the traffic, which could overload it.</p>
+
+            <h3>Active-Passive Setup</h3>
+            <p>One primary LB handles all traffic. A secondary (passive) LB sits idle, constantly exchanging heartbeats with the primary. If the primary fails to respond, the passive LB promotes itself to primary and takes over.</p>
+            
+            <div class="diagram" style="gap: 3rem;">
+                <div class="diagram-box diagram-lb" style="border: 2px solid white;">Active LB<br><span style="font-size: 0.8rem; font-weight: normal;">Handling Traffic</span></div>
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                    <span style="font-size: 0.8rem; color: var(--accent-blue);">Heartbeat Check</span>
+                    <div style="font-size: 2rem; color: var(--accent-blue);">⟷</div>
+                </div>
+                <div class="diagram-box diagram-lb" style="background: #444; color: #aaa;">Passive LB<br><span style="font-size: 0.8rem; font-weight: normal;">Idle / Waiting</span></div>
+            </div>
+            <p><em>Advanced Tip:</em> The instructor mentions using "epoch numbers" or fencing tokens to prevent "Split-Brain" (a scenario where both LBs mistakenly think they are the primary).</p>
+        </section>
+
+        <!-- SECTION 8: CONCLUSION -->
+        <section class="card">
+            <h2>8. Conclusion: Pros, Cons & Hidden Features</h2>
+            <p>In the real world, load balancers act as the gateway to your system. They often handle <strong>SSL Termination (Encryption/Decryption)</strong> so your internal servers don't have to waste CPU cycles doing it.</p>
+            
+            <div class="comparison-grid">
+                <div>
+                    <h3 style="color: var(--accent-green);">The Pros</h3>
+                    <ul>
+                        <li>Ensures servers don't become overwhelmed.</li>
+                        <li>Maximizes local cache performance (via consistent hashing).</li>
+                        <li>Acts as a secure reverse proxy/firewall.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 style="color: #ff5555;">The Cons</h3>
+                    <ul>
+                        <li><strong>Performance Bottleneck:</strong> If the LB is slow, the whole app is slow.</li>
+                        <li><strong>Complexity:</strong> Adds another point of failure to monitor, configure, and maintain.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align: center; margin-top: 2rem; padding-bottom: 2rem; color: var(--text-secondary);">
+            <p>End of Notes • Keep Scrolling to Review</p>
+        </footer>
+
+    </main>
+
+    <!-- JavaScript for Scroll Reveal Animation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // Trigger when 15% of the card is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        // Optional: Stop observing once it has become visible
+                        // observer.unobserve(entry.target); 
+                    }
+                });
+            }, observerOptions);
+
+            cards.forEach(card => {
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

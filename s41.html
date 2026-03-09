@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Filters - Study Feed</title>
+    <style>
+        /* CSS Variables for theming */
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --accent-blue: #007bff;
+            --accent-red: #e74c3c;
+            --accent-green: #2ecc71;
+            --border-color: #e1e8ed;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* Vertical Feed Layout */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px; /* Space between feed cards */
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border-color);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-bottom: 15px;
+            color: #222;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        p {
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 1.05rem;
+        }
+
+        strong {
+            color: #000;
+        }
+
+        .highlight-box {
+            background-color: #e9f5ff;
+            border-left: 4px solid var(--accent-blue);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Visualizer Styles */
+        .visualizer-container {
+            background-color: #2c3e50;
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .bit-array {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .bit {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #34495e;
+            border: 2px solid #7f8c8d;
+            border-radius: 4px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .bit.active {
+            background-color: var(--accent-green);
+            border-color: #27ae60;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .bit.checking {
+            background-color: #f39c12;
+            border-color: #e67e22;
+        }
+
+        .bit.error {
+            background-color: var(--accent-red);
+            border-color: #c0392b;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            flex-grow: 1;
+            min-width: 200px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-insert { background-color: var(--accent-blue); color: white; }
+        .btn-insert:hover { background-color: #0056b3; }
+        
+        .btn-check { background-color: #9b59b6; color: white; }
+        .btn-check:hover { background-color: #8e44ad; }
+        
+        .btn-reset { background-color: #95a5a6; color: white; }
+        .btn-reset:hover { background-color: #7f8c8d; }
+
+        .log-panel {
+            background-color: #1a252f;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            min-height: 80px;
+            color: #ecf0f1;
+        }
+        
+        .diagram {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            color: white;
+            font-family: monospace;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 15px 0;
+            line-height: 1.4;
+        }
+
+        /* Illustration placeholers */
+        .img-placeholder {
+            width: 100%;
+            background-color: #eaeaea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #888;
+            font-style: italic;
+            margin: 20px 0;
+            border: 2px dashed #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <!-- Header Section -->
+        <section class="card">
+            <h1>Bloom Filters</h1>
+            <p><strong>Topic:</strong> Systems Design & Data Structures</p>
+            <p>Notes based on the comprehensive video lecture and slide presentation.</p>
+        </section>
+
+        <!-- Background Section -->
+        <section class="card">
+            <h2>1. What is a Bloom Filter? (Background)</h2>
+            <p>A Bloom Filter is a <strong>probabilistic data structure</strong> based on hashing. Its primary purpose is to approximate the contents of a set to quickly tell you if an element is present.</p>
+            
+            <div class="highlight-box">
+                <strong>The Golden Rule of Bloom Filters:</strong>
+                <ul>
+                    <li><strong>No False Negatives:</strong> If the filter says an element is <strong>NOT</strong> in the set, it is 100% correct. You can conclusively trust a "no" answer.</li>
+                    <li><strong>False Positives Are Possible:</strong> If the filter says an element <strong>IS</strong> in the set, it might be wrong. A "yes" answer means "it is <em>probably</em> in the set, but you need to double-check the database to be sure."</li>
+                </ul>
+            </div>
+            <p>Because they don't store the actual data (only hashed bits), they use incredibly small amounts of memory and are extremely fast.</p>
+        </section>
+
+        <!-- Use Case 1 Section -->
+        <section class="card">
+            <h2>2. Real-World Use Case 1: Cache Filtering</h2>
+            <p>Most systems use Caches to store frequently requested data. However, caches have limited space. When new data is loaded, old data must be evicted.</p>
+            
+            <h3>The Problem:</h3>
+            <p>Imagine building Google Search. A user usually searches for <strong>"coding"</strong> (a highly relevant term we want in the cache). One day, the user makes a typo or their phone autocorrects to <strong>"cuddling"</strong>. The system fetches the results for "cuddling" and puts it in the cache, accidentally evicting the highly relevant "coding" data.</p>
+            
+            <h3>The Bloom Filter Solution:</h3>
+            <p>We place a Bloom Filter in front of the cache to track search terms we've seen before.</p>
+            <ol>
+                <li>User searches for the rare term "cuddling".</li>
+                <li>We ask the Bloom filter: <em>"Have we seen 'cuddling' before?"</em></li>
+                <li>The filter says: <strong>"No."</strong></li>
+                <li>Because it's a first-time search, the system decides it's not relevant enough to cache. It routes the request straight to the database and skips caching it.</li>
+            </ol>
+            <p>This protects your cache from being polluted with one-off "garbage" requests.</p>
+        </section>
+
+        <!-- Use Case 2 Section -->
+        <section class="card">
+            <h2>3. Real-World Use Case 2: SSTables (LSM Trees)</h2>
+            <p>LSM tree-based storage engines (like RocksDB or Cassandra) are incredibly fast at writing, but reading can be tricky.</p>
+            
+            <h3>The Problem:</h3>
+            <p>To find a specific key, the database first checks an in-memory tree. If it's not there, it must check physical files on the disk called <strong>SSTables</strong>, in order from newest to oldest. Searching an SSTable requires a Binary Search, which is relatively slow.</p>
+
+            <div class="diagram">
+SSTABLE 1           SSTABLE 2           SSTABLE 3
+aidan: 13           adam: 4             daniel: 5
+bob: 2              charlie: 17         jordan: 21
+zachary: 25         philip: 21          zachary: 20
+            </div>
+
+            <h3>The Bloom Filter Solution:</h3>
+            <p>Every SSTable is given its own small Bloom Filter.</p>
+            <ol>
+                <li>We want to search for the key <strong>"jordan"</strong>.</li>
+                <li>Instead of binary searching SSTable 1, we ask its Bloom Filter. It says "No". We instantly skip SSTable 1.</li>
+                <li>We ask SSTable 2's Bloom Filter. It says "No". We instantly skip SSTable 2.</li>
+                <li>We ask SSTable 3's Bloom Filter. It says "Yes". We finally perform the binary search on SSTable 3 and find "jordan".</li>
+            </ol>
+            <p>This skips massive amounts of disk reading, making read performance highly respectable.</p>
+        </section>
+
+        <!-- The Algorithm Section -->
+        <section class="card">
+            <h2>4. The Algorithm (Under the Hood)</h2>
+            <p>How do they actually work? It comes down to a bit array and a few hash functions.</p>
+
+            <h3>Step 1: Initialization</h3>
+            <p>Start with a single array of <strong>`m`</strong> bits, all initialized to `0`.</p>
+            <div class="diagram">[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]</div>
+
+            <h3>Step 2 & 3: Insertion</h3>
+            <p>Choose <strong>`k`</strong> different hash functions. To add an item (e.g., the string <em>"poop"</em>):</p>
+            <ul>
+                <li>Pass the key through all `k` hash functions.</li>
+                <li>Take the modulo `m` of the results to get array indices.</li>
+                <li>Example: <code>h1(poop)%m = 0</code>, <code>h2(poop)%m = 2</code>, <code>h3(poop)%m = m-1</code></li>
+                <li>Change the bits at those indices to `1`.</li>
+            </ul>
+
+            <h3>Step 4: Lookup / Checking</h3>
+            <p>To check if an item (e.g., <em>"jordan"</em>) is in the set:</p>
+            <ul>
+                <li>Pass "jordan" through the exact same `k` hash functions.</li>
+                <li>Example: <code>h1(jordan)%m = 0</code>, <code>h2(jordan)%m = 2</code>, <code>h3(jordan)%m = 3</code></li>
+                <li>Check the array at those indices. If <strong>even one</strong> of those indices is a `0` (like index 3 in this example), the item is definitely <strong>NOT</strong> in the set.</li>
+            </ul>
+        </section>
+
+        <!-- Interactive Visualizer -->
+        <section class="card">
+            <h2>Interactive Bloom Filter Visualizer</h2>
+            <p>Try it yourself! This visualizer uses an array of <strong>15 bits</strong> (m=15) and <strong>3 hash functions</strong> (k=3).</p>
+            
+            <div class="visualizer-container">
+                <div class="controls">
+                    <input type="text" id="strInput" placeholder="Enter a word (e.g., 'coding', 'jordan')">
+                    <button class="btn-insert" onclick="insertVisual()">Insert into Set</button>
+                    <button class="btn-check" onclick="checkVisual()">Check Set</button>
+                    <button class="btn-reset" onclick="resetVisual()">Reset Filter</button>
+                </div>
+                
+                <div class="bit-array" id="bitArrayUI">
+                    <!-- Bits generated by JS -->
+                </div>
+
+                <div class="log-panel" id="logPanel">
+                    System Ready. Awaiting commands...
+                </div>
+            </div>
+        </section>
+
+        <!-- Caveats & Conclusion Section -->
+        <section class="card">
+            <h2>5. Caveats: Why False Positives Happen</h2>
+            <p>As you add more and more elements to the set, the single array fills up with `1`s.</p>
+            <ul>
+                <li><strong>The Unlucky Hash:</strong> Eventually, you might check a completely new word, but purely by random chance, its `k` hash results point to indices that were <em>already set to 1</em> by other previous words.</li>
+                <li><strong>The Result:</strong> The filter looks at those indices, sees all `1`s, and incorrectly reports "Yes, this element is in the set."</li>
+            </ul>
+            
+            <div class="highlight-box">
+                <strong>The Fix: Resetting</strong><br>
+                Occasionally, when the filter becomes too crowded (too many 1s), it makes sense to reset the Bloom filter to all `0`s to lower the false positive rate. The penalty is that you lose the historical data already in the filter and have to start building it up again.
+            </div>
+
+            <h2>Conclusion</h2>
+            <p>Bloom filters are a highly clever hashing algorithm. They are practically mandatory knowledge for Systems Design interviews, widely used in competitive programming, and are the backbone of read-performance in modern LSM database engines.</p>
+        </section>
+
+    </div>
+
+    <!-- JavaScript for Interactive Visualizer -->
+    <script>
+        // Bloom Filter Parameters
+        const M_BITS = 15;
+        const K_HASHES = 3;
+        let bloomFilterArray = new Array(M_BITS).fill(0);
+
+        // UI Elements
+        const bitArrayUI = document.getElementById('bitArrayUI');
+        const logPanel = document.getElementById('logPanel');
+        const strInput = document.getElementById('strInput');
+
+        // Initialize UI
+        function renderBits() {
+            bitArrayUI.innerHTML = '';
+            for(let i = 0; i < M_BITS; i++) {
+                const bitDiv = document.createElement('div');
+                bitDiv.className = `bit ${bloomFilterArray[i] === 1 ? 'active' : ''}`;
+                bitDiv.id = `bit-${i}`;
+                bitDiv.innerText = bloomFilterArray[i];
+                bitArrayUI.appendChild(bitDiv);
+            }
+        }
+
+        function log(msg) {
+            logPanel.innerHTML = msg;
+        }
+
+        // Simple Hash Functions to simulate k different hashes
+        // Seeded differently to produce different results
+        function stringHash(str, seed) {
+            let hash = seed;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash * 31 + str.charCodeAt(i)) % M_BITS;
+            }
+            return Math.abs(hash); // Ensure positive index
+        }
+
+        function getHashes(str) {
+            return [
+                stringHash(str, 17),
+                stringHash(str, 89),
+                stringHash(str, 113)
+            ];
+        }
+
+        // Action: Insert
+        function insertVisual() {
+            const val = strInput.value.trim();
+            if(!val) {
+                log("Please enter a word first.");
+                return;
+            }
+
+            // Remove any old highlight states
+            renderBits();
+
+            const hashes = getHashes(val);
+            let logMsg = `<strong>Action: Inserting "${val}"</strong><br>`;
+            
+            hashes.forEach((hashVal, index) => {
+                logMsg += `Hash ${index + 1} -> Index ${hashVal}<br>`;
+                bloomFilterArray[hashVal] = 1; // Set the bit to 1
+                
+                // Visual Highlight
+                const bitUI = document.getElementById(`bit-${hashVal}`);
+                if(bitUI) {
+                    bitUI.classList.add('active');
+                    bitUI.innerText = '1';
+                }
+            });
+
+            logMsg += `<span style="color: #2ecc71;">Done. Bits set to 1.</span>`;
+            log(logMsg);
+            strInput.value = '';
+        }
+
+        // Action: Check
+        function checkVisual() {
+            const val = strInput.value.trim();
+            if(!val) {
+                log("Please enter a word first.");
+                return;
+            }
+
+            // Reset visual states but keep active 1s
+            renderBits();
+
+            const hashes = getHashes(val);
+            let logMsg = `<strong>Action: Checking for "${val}"</strong><br>`;
+            let found = true;
+            let missingIndex = -1;
+
+            hashes.forEach((hashVal, index) => {
+                logMsg += `Hash ${index + 1} -> Checking Index ${hashVal}... `;
+                
+                const bitUI = document.getElementById(`bit-${hashVal}`);
+                
+                if (bloomFilterArray[hashVal] === 0) {
+                    logMsg += `It is a 0!<br>`;
+                    found = false;
+                    missingIndex = hashVal;
+                    if(bitUI) bitUI.classList.add('error'); // Highlight red
+                } else {
+                    logMsg += `It is a 1.<br>`;
+                    if(bitUI && !bitUI.classList.contains('error')) {
+                        bitUI.classList.add('checking'); // Highlight orange
+                    }
+                }
+            });
+
+            if (found) {
+                logMsg += `<br><strong style="color: #f39c12;">Result: Probably in the set (Could be a false positive).</strong>`;
+            } else {
+                logMsg += `<br><strong style="color: #e74c3c;">Result: Definitely NOT in the set! (Because index ${missingIndex} was 0)</strong>`;
+            }
+
+            log(logMsg);
+        }
+
+        // Action: Reset
+        function resetVisual() {
+            bloomFilterArray = new Array(M_BITS).fill(0);
+            renderBits();
+            log("Filter has been reset to all 0s. (Cleared to prevent false positives!)");
+        }
+
+        // Initial Render
+        renderBits();
+    </script>
+</body>
+</html>

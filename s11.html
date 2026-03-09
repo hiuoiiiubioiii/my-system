@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fencing Tokens | Study Notes Feed</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --accent-blue: #2563eb;
+            --accent-red: #dc2626;
+            --accent-green: #16a34a;
+            --border-color: #e5e7eb;
+            --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* Feed Layout */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .header-section h1 {
+            font-size: 2.5rem;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        .header-section p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Styling */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+        }
+
+        .card h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            color: #111827;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        .card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 1.05rem;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight-box {
+            background-color: #eff6ff;
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .danger-box {
+            background-color: #fef2f2;
+            border-left: 4px solid var(--accent-red);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .success-box {
+            background-color: #f0fdf4;
+            border-left: 4px solid var(--accent-green);
+            padding: 1rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Visualization Containers */
+        .visualization {
+            background-color: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .vis-title {
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        svg {
+            max-width: 100%;
+            height: auto;
+            font-family: var(--font-main);
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: right;
+            margin-top: -1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <header class="header-section">
+            <h1>Fencing Tokens</h1>
+            <p>A comprehensive breakdown of distributed consensus, process pauses, and split-brain prevention.</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="card">
+            <div class="timestamp">Video Ref: 00:30</div>
+            <h2>1. The Threat of Unreliable Nodes</h2>
+            <p>Even when you control every single server, database, and node in your distributed system, it is highly possible for individual nodes to become unreliable.</p>
+            <p>These nodes usually have good intentions. They are trying to work with the system, but they might be operating on outdated information. They believe something to be true, while the <strong>majority of other nodes disagree</strong>.</p>
+            
+            <div class="highlight-box">
+                <strong>The "Rule of One" Problem:</strong>
+                <br>Unreliable nodes become a massive threat when your system requires strictly <em>one</em> of something. For example:
+                <ul>
+                    <li><strong>One Leader:</strong> In a single-leader replication setup.</li>
+                    <li><strong>One Distributed Lock:</strong> Only one process should hold a lock to edit a file at a time.</li>
+                    <li><strong>One Unique Username:</strong> Ensuring only one account can claim a username like <em>"poonslayer69"</em>.</li>
+                </ul>
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="card">
+            <div class="timestamp">Video Ref: 01:23</div>
+            <h2>2. Why do Nodes Fail? "Process Pauses"</h2>
+            <p>How does a node get out of sync in the first place? Often, it's due to a <strong>Process Pause</strong>. A node will be running a process, and suddenly it gets preempted by a "stop the world" background task. The active process freezes completely until the background task finishes.</p>
+            
+            <p><strong>Three common examples of Process Pauses:</strong></p>
+            <ul>
+                <li><strong>Garbage Collection Algorithms:</strong> Common in languages like Java. Java uses "stop the world" garbage collection. It will literally freeze all ongoing processes (sometimes for 10 to 15 seconds!) to clean up memory.</li>
+                <li><strong>Virtual Machine Migration:</strong> If a VM is physically moved from one host server to another, all processes must pause during the transit.</li>
+                <li><strong>User Actions:</strong> Something as simple as a user closing their laptop lid or hitting the power button on their mobile phone.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="card">
+            <div class="timestamp">Video Ref: 02:39</div>
+            <h2>3. The Disaster Scenario (Without Fencing)</h2>
+            <p>Because distributed systems don't have shared memory, they rely on <strong>"Leases"</strong> for locks. A lease grants a node a lock, but it expires after a certain amount of time.</p>
+            <p>If a node pauses while holding a lease, disaster strikes. Below is the visualization of a <strong>Split-Brain / Corrupted Data</strong> scenario.</p>
+
+            <div class="visualization">
+                <div class="vis-title">Visualization: Unfenced Lock Collision</div>
+                <!-- SVG Sequence Diagram: Problem -->
+                <svg viewBox="0 0 700 350" width="100%" height="350">
+                    <!-- Grid Lines -->
+                    <line x1="100" y1="50" x2="650" y2="50" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="150" x2="650" y2="150" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="250" x2="650" y2="250" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="300" x2="650" y2="300" stroke="#ccc" stroke-dasharray="4"/>
+                    
+                    <!-- Labels -->
+                    <text x="10" y="55" font-weight="bold">Lock Service</text>
+                    <text x="10" y="155" font-weight="bold">Client 1</text>
+                    <text x="10" y="255" font-weight="bold">Client 2</text>
+                    <text x="10" y="305" font-weight="bold">Storage</text>
+                    
+                    <!-- Client 1 gets lease -->
+                    <path d="M 120 150 L 140 50" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="110" y="100" font-size="12">get lease</text>
+                    
+                    <path d="M 160 50 L 180 150" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="175" y="100" font-size="12">ok</text>
+
+                    <!-- The Pause -->
+                    <rect x="180" y="140" width="350" height="20" fill="#e2e8f0" stroke="#94a3b8"/>
+                    <text x="250" y="154" font-size="12" fill="#334155">stop-the-world GC pause</text>
+
+                    <!-- Lease Expires -->
+                    <path d="M 330 150 L 350 50" stroke="red" stroke-dasharray="4" fill="none"/>
+                    <text x="310" y="100" font-size="12" fill="red">lease expired!</text>
+
+                    <!-- Client 2 gets lease -->
+                    <path d="M 360 250 L 380 50" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="345" y="200" font-size="12">get lease</text>
+
+                    <path d="M 400 50 L 420 250" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="415" y="120" font-size="12">ok</text>
+
+                    <!-- Client 2 Writes -->
+                    <path d="M 440 250 L 460 300" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="420" y="280" font-size="12">write data</text>
+                    <path d="M 480 300 L 500 250" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="495" y="280" font-size="12">ok</text>
+
+                    <!-- Client 1 Wakes up and writes -->
+                    <path d="M 530 150 L 580 300" stroke="red" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="560" y="220" font-size="12" fill="red">write data</text>
+                    
+                    <!-- Explosion / Collision -->
+                    <path d="M 570 300 L 590 280 L 600 310 L 610 280 L 630 300 L 610 320 L 620 340 L 590 320 L 570 340 L 580 310 Z" fill="orange" stroke="red"/>
+                    <text x="640" y="315" font-size="14" fill="red" font-weight="bold">CORRUPTION!</text>
+
+                    <!-- Arrow Definition -->
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#000" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="danger-box">
+                <strong>What just happened?</strong>
+                <p>Client 1 was about to execute code, but experienced a 15-second GC pause. During this pause, its lease expired. Client 2 claimed the lock and wrote its data. When Client 1 woke up, <em>it didn't check if its lease was still valid</em>. It immediately wrote its data, overwriting Client 2 and corrupting the storage.</p>
+                <p>If this was a leader election, the nodes would assume the paused leader is dead and elect a new one. When the old leader wakes up, you get a <strong>Split-Brain</strong> situation where two nodes think they are the single leader!</p>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="card">
+            <div class="timestamp">Video Ref: 05:37</div>
+            <h2>4. The Solution: Fencing Tokens</h2>
+            <p>To fix this, we implement <strong>Fencing Tokens</strong>. </p>
+            <p><strong>The Core Idea:</strong> Every time the consensus service (majority of nodes / Lock Service) makes a decision, it assigns a <em>monotonically increasing ID</em> (a number that strictly goes up). This ID is passed along with every write request to the storage.</p>
+
+            <div class="visualization">
+                <div class="vis-title">Visualization: Fencing Tokens Rejecting Outdated Nodes</div>
+                <!-- SVG Sequence Diagram: Solution -->
+                <svg viewBox="0 0 700 350" width="100%" height="350">
+                    <!-- Grid Lines -->
+                    <line x1="100" y1="50" x2="650" y2="50" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="150" x2="650" y2="150" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="250" x2="650" y2="250" stroke="#ccc" stroke-dasharray="4"/>
+                    <line x1="100" y1="300" x2="650" y2="300" stroke="#ccc" stroke-dasharray="4"/>
+                    
+                    <!-- Labels -->
+                    <text x="10" y="55" font-weight="bold">Lock Service</text>
+                    <text x="10" y="155" font-weight="bold">Client 1</text>
+                    <text x="10" y="255" font-weight="bold">Client 2</text>
+                    <text x="10" y="305" font-weight="bold">Storage</text>
+                    
+                    <!-- Client 1 gets lease + Token 33 -->
+                    <path d="M 120 150 L 140 50" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="110" y="100" font-size="12">get lease</text>
+                    
+                    <path d="M 160 50 L 180 150" stroke="var(--accent-blue)" stroke-width="2" marker-end="url(#arrow-blue)" fill="none"/>
+                    <text x="185" y="90" font-size="12" fill="var(--accent-blue)" font-weight="bold">ok,</text>
+                    <text x="185" y="105" font-size="12" fill="var(--accent-blue)" font-weight="bold">Token: 33</text>
+
+                    <!-- The Pause -->
+                    <rect x="180" y="140" width="350" height="20" fill="#e2e8f0" stroke="#94a3b8"/>
+                    <text x="250" y="154" font-size="12" fill="#334155">stop-the-world GC pause</text>
+
+                    <!-- Lease Expires -->
+                    <path d="M 330 150 L 350 50" stroke="#94a3b8" stroke-dasharray="4" fill="none"/>
+                    <text x="310" y="100" font-size="12" fill="#94a3b8">lease expired</text>
+
+                    <!-- Client 2 gets lease + Token 34 -->
+                    <path d="M 360 250 L 380 50" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="345" y="200" font-size="12">get lease</text>
+
+                    <path d="M 400 50 L 420 250" stroke="var(--accent-green)" stroke-width="2" marker-end="url(#arrow-green)" fill="none"/>
+                    <text x="425" y="110" font-size="12" fill="var(--accent-green)" font-weight="bold">ok,</text>
+                    <text x="425" y="125" font-size="12" fill="var(--accent-green)" font-weight="bold">Token: 34</text>
+
+                    <!-- Client 2 Writes with Token 34 -->
+                    <path d="M 440 250 L 460 300" stroke="var(--accent-green)" stroke-width="2" marker-end="url(#arrow-green)" fill="none"/>
+                    <text x="380" y="275" font-size="12" fill="var(--accent-green)">write, Token: 34</text>
+                    <path d="M 480 300 L 500 250" stroke="black" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                    <text x="490" y="280" font-size="12">ok</text>
+
+                    <!-- Client 1 Wakes up and writes with Token 33 -->
+                    <path d="M 530 150 L 580 300" stroke="red" stroke-width="2" marker-end="url(#arrow-red)" fill="none"/>
+                    <text x="510" y="220" font-size="12" fill="red">write, Token: 33</text>
+                    
+                    <!-- REJECTION -->
+                    <path d="M 600 300 L 620 150" stroke="red" stroke-width="2" stroke-dasharray="4" marker-end="url(#arrow-red)" fill="none"/>
+                    <text x="625" y="220" font-size="12" fill="red" font-weight="bold">REJECTED!</text>
+                    <text x="625" y="235" font-size="12" fill="red">33 < 34 (old token)</text>
+
+                    <!-- Arrow Definitions -->
+                    <defs>
+                        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#000" />
+                        </marker>
+                        <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="var(--accent-blue)" />
+                        </marker>
+                        <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="var(--accent-green)" />
+                        </marker>
+                        <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="red" />
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <div class="success-box">
+                <strong>How it saves the system:</strong>
+                <ol>
+                    <li>Client 1 requests the lock and receives it along with <strong>Token 33</strong>.</li>
+                    <li>Client 1 enters a GC Pause, and its lease expires.</li>
+                    <li>Client 2 requests the lock, receives it, and is granted the next ID: <strong>Token 34</strong>.</li>
+                    <li>Client 2 writes its data, passing Token 34. The storage system remembers: <em>"The highest token I've seen is 34."</em></li>
+                    <li>Client 1 wakes up and attempts to write its data, passing <strong>Token 33</strong>.</li>
+                    <li>The storage service checks the token and says: <em>"Wait, 33 is lower than 34. You are an outdated node."</em> It rejects Client 1's request, keeping the data perfectly safe!</li>
+                </ol>
+            </div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="card">
+            <div class="timestamp">Video Ref: 06:53</div>
+            <h2>5. Conclusion</h2>
+            <p>Because process pauses and unreliable client nodes are an unavoidable reality in distributed systems, <strong>we can only trust decisions made by a majority of nodes</strong> in our cluster. A single node can be faulty without even realizing it.</p>
+            <p>Fencing tokens are an incredibly easy-to-implement safety mechanism. They act as a guard rail ensuring that once a consensus is reached by the system, no single faulty, out-of-sync node can overwrite it, completely protecting you against multiple lock holders and split-brain scenarios.</p>
+        </article>
+
+    </main>
+
+</body>
+</html>

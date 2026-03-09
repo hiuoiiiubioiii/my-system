@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Cassandra | Study Feed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --feed-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent-blue: #4dabf7;
+            --accent-green: #51cf66;
+            --accent-orange: #ff922b;
+            --accent-red: #ff6b6b;
+            --border-color: #333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Continuous Feed Container */
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            background-color: var(--feed-bg);
+            min-height: 100vh;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--accent-blue);
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #ffffff;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--accent-orange);
+            margin-top: 15px;
+            margin-bottom: 10px;
+        }
+
+        p, li {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+        }
+
+        ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: #ffffff;
+        }
+
+        .highlight {
+            background-color: rgba(77, 171, 247, 0.15);
+            color: var(--accent-blue);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        /* --- VISUALIZATIONS --- */
+        .visual-box {
+            background-color: #252525;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .visual-caption {
+            font-size: 0.85rem;
+            color: var(--accent-green);
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* 1. Wide Column Data Model */
+        .data-model {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .data-row {
+            display: flex;
+            background: rgba(255, 146, 43, 0.1);
+            border: 1px solid var(--accent-orange);
+            border-radius: 6px;
+            padding: 10px;
+            gap: 10px;
+            align-items: center;
+        }
+        .pk {
+            background: var(--accent-orange);
+            color: #000;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 4px;
+            min-width: 80px;
+            text-align: center;
+        }
+        .columns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            flex-grow: 1;
+        }
+        .col {
+            background: #333;
+            border-left: 4px solid var(--accent-blue);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .col span { font-size: 0.75rem; color: var(--accent-blue); }
+
+        /* 2. LSM Tree / Storage Engine */
+        .lsm-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 10px;
+        }
+        .lsm-node {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+            border: 1px solid var(--border-color);
+        }
+        .lsm-memory { border-top: 4px solid var(--accent-blue); }
+        .lsm-disk { border-top: 4px solid var(--accent-green); }
+        .lsm-arrow {
+            font-size: 2rem;
+            color: var(--text-muted);
+        }
+
+        /* 3. Bloom Filter */
+        .bloom-filter {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .bf-bit {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #222;
+            border: 1px solid #444;
+            font-family: 'JetBrains Mono', monospace;
+            border-radius: 4px;
+        }
+        .bf-active { background: var(--accent-green); color: #000; font-weight: bold; border-color: var(--accent-green); }
+
+        /* Use Case Badges */
+        .badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        .badge {
+            background: rgba(81, 207, 102, 0.15);
+            color: var(--accent-green);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            .feed-container { padding: 20px; }
+            .lsm-container { flex-direction: column; }
+            .lsm-arrow { transform: rotate(90deg); margin: 10px 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <header>
+            <h1>Apache Cassandra</h1>
+            <p style="text-align: center; color: var(--accent-blue);">Comprehensive Study Feed & Visual Notes</p>
+            <p style="text-align: center; font-size: 0.9rem;">Scroll down to follow the lecture chronologically. No clicking required.</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <section>
+            <h2>1. Background & Philosophy</h2>
+            <p>Cassandra is an open-source, <strong>NoSQL, wide-column database</strong> originally created at Facebook. It borrows its distributed architecture from Amazon's <em>Dynamo</em> and its data model from Google's <em>Bigtable</em>.</p>
+            <h3>The Core Design Philosophy</h3>
+            <p><strong>The problem with SQL:</strong> Traditional SQL databases tend to scale poorly horizontally because highly related (relational) data forces operations to touch multiple partitions. Doing an atomic commit or a join across multiple network partitions introduces massive coordination delays.</p>
+            <p><strong>The Cassandra Solution:</strong> Cassandra optimizes heavily for <strong>single-partition writes and reads</strong>. The goal is to denormalize your data so that <em>all relevant information</em> is stored in one single row within a single partition. This eliminates network delay and allows read/write throughput to scale linearly.</p>
+        </section>
+
+        <!-- Topic 2 -->
+        <section>
+            <h2>2. Data Organization (Wide Column)</h2>
+            <p>Cassandra is a "Wide Column" store. Unlike relational databases, rows can have an arbitrary number of columns, and different rows can have entirely different columns.</p>
+            <ul>
+                <li><span class="highlight">Partition Key:</span> The primary identifier. It is hashed to determine <strong>which physical server node</strong> holds this row.</li>
+                <li><span class="highlight">Clustering Keys:</span> Acts as an internal, local index. It determines how the data is <strong>sorted and ordered</strong> on the disk <em>inside</em> that specific partition.</li>
+            </ul>
+
+            <div class="visual-box">
+                <div class="data-model">
+                    <!-- Row 1 -->
+                    <div class="data-row">
+                        <div class="pk">Smith</div>
+                        <div class="columns">
+                            <div class="col"><span>Gender</span>Male</div>
+                            <div class="col"><span>Age</span>21</div>
+                            <div class="col"><span>ID</span>10234567</div>
+                        </div>
+                    </div>
+                    <!-- Row 2 -->
+                    <div class="data-row">
+                        <div class="pk">John</div>
+                        <div class="columns">
+                            <div class="col"><span>Gender</span>Male</div>
+                            <div class="col"><span>ID</span>10123232</div>
+                        </div>
+                    </div>
+                    <!-- Row 3 -->
+                    <div class="data-row">
+                        <div class="pk">Harry</div>
+                        <div class="columns">
+                            <div class="col"><span>Gender</span>Male</div>
+                            <div class="col"><span>Education</span>Masters</div>
+                            <div class="col"><span>ID</span>22322333</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="visual-caption">Visualization: Wide Column Structure. Notice how "John" lacks an Age column, and "Harry" has an Education column.</div>
+            </div>
+        </section>
+
+        <!-- Topic 3 -->
+        <section>
+            <h2>3. The Storage Engine (LSM Trees)</h2>
+            <p>Traditional SQL databases use B-Trees, which constantly rebalance on the disk and slow down write speeds. Because Cassandra is optimized for <strong>massive write throughput</strong>, it uses a <strong>Log-Structured Merge (LSM) Tree + SSTable</strong> storage engine.</p>
+            
+            <h3>How Writes Work (Extremely Fast)</h3>
+            <p>Writes are simply buffered to an in-memory tree called a <strong>MemTable</strong>. Because it is writing to RAM, it is practically instantaneous. Once the MemTable is full, it flushes sequentially to the disk as an immutable <strong>SSTable (Sorted String Table)</strong>.</p>
+            <p><em>The Update/Delete Catch:</em> Because SSTables are immutable, updates and deletes just create a <em>new</em> entry. Over time, this takes up extra disk space until a background CPU process called <strong>Log Compaction</strong> runs to clean up old versions.</p>
+
+            <div class="visual-box">
+                <div class="lsm-container">
+                    <div class="lsm-node lsm-memory">
+                        <h3 style="margin-top:0;">MemTable</h3>
+                        <p style="font-size: 0.85rem; margin-bottom:0;">(In-Memory)<br>Accepts rapid writes.</p>
+                    </div>
+                    <div class="lsm-arrow">➔</div>
+                    <div class="lsm-node lsm-disk">
+                        <h3 style="margin-top:0;">SSTable</h3>
+                        <p style="font-size: 0.85rem; margin-bottom:0;">(On-Disk)<br>Immutable sorted data.</p>
+                    </div>
+                </div>
+                <div class="visual-caption">Write Path: RAM to Disk Flush</div>
+            </div>
+
+            <h3>How Reads Work (Slower) & Bloom Filters</h3>
+            <p>Reads can be slow because Cassandra has to search through multiple SSTables on the disk to find the most recent version of a key. To solve this, Cassandra uses <strong>Bloom Filters</strong>.</p>
+            <p>A Bloom Filter is a highly space-efficient probabilistic data structure. It instantly tells the database either <em>"This key is definitely NOT in this table"</em> (preventing a useless disk read) or <em>"This key MIGHT be in this table."</em></p>
+            
+            <div class="visual-box">
+                <div class="bloom-filter">
+                    <div class="bf-bit">0</div>
+                    <div class="bf-bit bf-active">1</div>
+                    <div class="bf-bit">0</div>
+                    <div class="bf-bit">0</div>
+                    <div class="bf-bit bf-active">1</div>
+                    <div class="bf-bit">0</div>
+                    <div class="bf-bit bf-active">1</div>
+                    <div class="bf-bit">0</div>
+                </div>
+                <div class="visual-caption">Bloom Filter Bit Array Optimization</div>
+            </div>
+        </section>
+
+        <!-- Topic 4 -->
+        <section>
+            <h2>4. Partitioning & Replication</h2>
+            <p>Cassandra uses <strong>Consistent Hashing</strong> to map Partition Keys to physical server replicas. This ensures that when a server node dies or a new one is added, data rebalancing is minimal.</p>
+            
+            <h3>Dynamo-Style Replication & Quorums</h3>
+            <p>All writes are sent to <em>every single replica</em> responsible for that partition. However, the client doesn't have to wait for all of them. The Database Admin configures a <strong>Quorum</strong>—the number of replicas that must reply with "Success" before the client is told the write succeeded. (e.g., waiting for 2 out of 3 replicas).</p>
+
+            <h3>Handling Conflicting Writes</h3>
+            <ul>
+                <li><strong>Last Write Wins (LWW):</strong> Resolves conflicts based on timestamps. <em>Warning:</em> Server clocks drift. Even with NTP (Network Time Protocol) syncing, clocks are never perfectly aligned, meaning "Last Write Wins" can result in silently dropped/lost data if timestamps cross.</li>
+                <li><strong>Read Repair:</strong> If a client requests data and notices that Replica A has Version 5 but Replica B has an outdated Version 4, the client will instantly update Replica B.</li>
+                <li><strong>Anti-Entropy:</strong> A background process where replicas mathematically compare their data trees to find inconsistencies and sync up (guaranteeing <em>Eventual Consistency</em>).</li>
+                <li><strong>Hinted Handoff:</strong> If a replica is temporarily down when a write occurs, the coordinator node stores the write locally and hands it off to the replica as soon as it comes back online.</li>
+            </ul>
+        </section>
+
+        <!-- Topic 5 -->
+        <section>
+            <h2>5. Fault Tolerance & Gossip Protocol</h2>
+            <p>Because data is copied across replicas, read and write throughput scales linearly. You can define <strong>Replication Topology</strong> (e.g., ensuring Replica 1 is in a New York datacenter, and Replica 2 is in London) to survive entire datacenter outages.</p>
+            
+            <h3>The Gossip Protocol</h3>
+            <p>Nodes constantly "gossip" with each other in the background. They pass around a list of timestamps representing the last time they heard a heartbeat from other nodes. If a node hasn't updated its gossip timestamp in a long time, the cluster presumes that node is dead and routes traffic away from it.</p>
+        </section>
+
+        <!-- Topic 6 -->
+        <section>
+            <h2>6. Indexes & Denormalization</h2>
+            <p>Cassandra has <strong>NO Global Indexes</strong>. If you want to search by a specific column value across the whole database, you can't do it efficiently. Indexes are strictly <em>local</em> to a partition, built using Clustering Keys.</p>
+            <p><strong>Denormalization:</strong> If you need to view User Data sorted by "Age" and also sorted by "Location", Cassandra forces you to duplicate (denormalize) the data into two separate copies within the partition. This speeds up reads, but <em>slows down writes</em> because the system has to write the data multiple times.</p>
+        </section>
+
+        <!-- Topic 7 -->
+        <section>
+            <h2>7. Use Cases for Cassandra</h2>
+            <p>Cassandra is built for one main purpose: <strong>WRITE-HEAVY APPLICATIONS!</strong></p>
+            <p>It thrives when data is generally self-contained and does not require relational "Joins" with data outside of its own partition. Essentially, you are appending massive streams of data rapidly.</p>
+            
+            <div class="badges">
+                <span class="badge">📡 IoT Sensor Readings</span>
+                <span class="badge">💬 Chat/Messaging Apps (Discord)</span>
+                <span class="badge">🖱️ User Activity Tracking</span>
+                <span class="badge">📜 Logging Data</span>
+            </div>
+            
+            <p style="margin-top: 15px;"><em>Example:</em> For a chat app, you use the Chat Room ID as the Partition Key, and the Message Timestamp as the Clustering Key. You can pull massive, ordered chunks of chat history instantly.</p>
+        </section>
+
+        <!-- Topic 8 -->
+        <section>
+            <h2>8. Conclusion & Pitfalls</h2>
+            <p>Cassandra is unparalleled for write-heavy apps scaling to millions or billions of users where raw performance and high availability are the main concerns.</p>
+            
+            <h3>When NOT to use Cassandra (The Pitfalls)</h3>
+            <ul>
+                <li><strong>Lack of Strong Consistency:</strong> Because of Hinted Handoffs, clock drift, and Quorums, Cassandra is an <em>Eventual Consistency</em> database. Do not use it for banking balances or financial ledgers!</li>
+                <li><strong>No Complex Relationships:</strong> It lacks the ability to support JOINS or relational data structures.</li>
+                <li><strong>No Global Secondary Indexes:</strong> You cannot easily query random column values across the entire dataset.</li>
+            </ul>
+            <p>If you need ACID compliance, strict consistency, and complex relational queries, you must use a traditional SQL database instead.</p>
+        </section>
+
+    </div>
+
+</body>
+</html>

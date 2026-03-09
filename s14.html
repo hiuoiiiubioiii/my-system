@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raft Consensus Algorithm - Study Notes</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-card: #1e1e24;
+            --text-main: #e8e8fd;
+            --text-muted: #a0a0b5;
+            --accent-primary: #6b63ff;
+            --accent-success: #00b8a3;
+            --accent-danger: #ff6b6b;
+            --accent-warning: #fca311;
+            --border-color: #333344;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Scroll Progress Bar */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+            width: 0%;
+            z-index: 1000;
+        }
+
+        /* Feed Container */
+        main {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            color: var(--accent-primary);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+        }
+
+        /* Card Styling */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeUp 0.6s forwards ease-out;
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            color: #fff;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h3 {
+            font-size: 1.3rem;
+            color: var(--accent-primary);
+            margin: 20px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            color: var(--accent-warning);
+            font-weight: bold;
+        }
+
+        /* Visualizations / Diagrams */
+        .visual-container {
+            background-color: #17171c;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
+
+        /* CSS Database Cylinder */
+        .db-cluster {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .db-icon {
+            width: 60px;
+            height: 70px;
+            background: linear-gradient(to right, #ccc, #fff, #ccc);
+            border-radius: 50% / 10px;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        .db-icon::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 50%;
+            border: 1px solid #999;
+        }
+        .db-icon::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            height: 1px;
+            background: rgba(0,0,0,0.2);
+            box-shadow: 0 20px 0 rgba(0,0,0,0.2);
+        }
+
+        /* Log Tables */
+        table.log-table {
+            border-collapse: collapse;
+            color: white;
+            font-size: 0.9rem;
+            text-align: center;
+            background: #2a2a35;
+        }
+
+        table.log-table th, table.log-table td {
+            border: 1px solid #444;
+            padding: 8px 12px;
+        }
+
+        table.log-table th {
+            background-color: #1e1e24;
+            color: var(--text-muted);
+        }
+
+        .cell-match { background-color: rgba(0, 184, 163, 0.2); color: var(--accent-success); font-weight: bold; }
+        .cell-error { background-color: rgba(255, 107, 107, 0.2); color: var(--accent-danger); font-weight: bold; }
+
+        /* Term Callouts */
+        .term-box {
+            background: rgba(107, 99, 255, 0.1);
+            border-left: 4px solid var(--accent-primary);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .danger-box {
+            background: rgba(255, 107, 107, 0.1);
+            border-left: 4px solid var(--accent-danger);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .node {
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: bold;
+            border: 2px solid;
+        }
+        .node.leader { border-color: var(--accent-success); color: var(--accent-success); background: rgba(0,184,163,0.1); }
+        .node.follower { border-color: var(--text-muted); color: var(--text-muted); background: rgba(160,160,181,0.1); }
+        .node.candidate { border-color: var(--accent-warning); color: var(--accent-warning); background: rgba(252,163,17,0.1); }
+        
+        .arrow { color: var(--text-muted); font-size: 1.5rem; }
+
+    </style>
+</head>
+<body>
+
+    <div id="progress-bar"></div>
+
+    <main>
+        <header>
+            <h1>Raft Consensus Algorithm</h1>
+            <p>Complete In-Depth Lecture Breakdown</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <section class="card" style="animation-delay: 0.1s;">
+            <h2>1. Introduction & Background</h2>
+            <p>Raft is a consensus algorithm introduced around 2014 designed to display <strong>fault tolerance</strong> in distributed systems.</p>
+            <ul>
+                <li><strong>Purpose:</strong> Used to build a replicated log so that every node (server) in a cluster eventually has the exact same log.</li>
+                <li><strong>Result:</strong> Achieves <em>Total Order Broadcast</em> (eventual consistency across databases).</li>
+                <li><strong>Why is it popular?</strong> Compared to older, notoriously complex algorithms like Paxos (or Multi-Paxos), Raft was explicitly designed to be <strong>easy to understand</strong>.</li>
+            </ul>
+            
+            <div class="visual-container">
+                <div class="db-cluster">
+                    <div class="db-icon"></div>
+                    <table class="log-table">
+                        <tr><th>Op</th><td>A</td><td>B</td><td>C</td></tr>
+                        <tr><th>Term</th><td>1</td><td>1</td><td>2</td></tr>
+                    </table>
+                </div>
+                <div class="db-cluster">
+                    <div class="db-icon"></div>
+                    <table class="log-table">
+                        <tr><th>Op</th><td>A</td><td>B</td><td>C</td></tr>
+                        <tr><th>Term</th><td>1</td><td>1</td><td>2</td></tr>
+                    </table>
+                </div>
+                <div class="db-cluster" style="opacity: 0.7;">
+                    <div class="db-icon"></div>
+                    <table class="log-table">
+                        <tr><th>Op</th><td>A</td><td>B</td><td></td></tr>
+                        <tr><th>Term</th><td>1</td><td>1</td><td></td></tr>
+                    </table>
+                </div>
+            </div>
+            <p style="text-align:center; font-size:0.9rem; color:var(--text-muted);">
+                <em>Goal: Ensure all databases eventually share the exact same table/log, achieving eventual consistency.</em>
+            </p>
+        </section>
+
+        <!-- Topic 2 -->
+        <section class="card" style="animation-delay: 0.2s;">
+            <h2>2. Core Vocabulary</h2>
+            <p>Three crucial terms define the mechanics of Raft:</p>
+            
+            <div class="term-box">
+                <strong>Quorum:</strong> A majority of nodes in the cluster (e.g., 3 out of 5). <br>
+                <em>Rule:</em> It is impossible for two different quorums to make conflicting decisions because at least one node <strong>must overlap</strong> between the two groups, preventing a conflicting vote.
+            </div>
+
+            <div class="term-box">
+                <strong>Fencing Token (Term Number):</strong> An increasing number used to resolve conflicts like "split brain." In Raft, this is called the Term Number.<br>
+                <em>Rule:</em> The higher Term Number always wins.
+            </div>
+
+            <div class="term-box">
+                <strong>Leader:</strong> A single node through which <strong>all writes</strong> are sent and propagated. If the leader fails, the system must switch to a new leader safely.
+            </div>
+        </section>
+
+        <!-- Topic 3 -->
+        <section class="card" style="animation-delay: 0.3s;">
+            <h2>3. Raft Overview: High-Level Flow</h2>
+            <p>How does data actually get saved into the database layer?</p>
+            <ol style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Client Request:</strong> The Leader receives a write request.</li>
+                <li><strong>Propagation:</strong> The Leader sends all writes to the "Follower" nodes.</li>
+                <li><strong>Quorum Agreement:</strong> Once the Leader receives positive responses from a <em>majority</em> (quorum) of followers accepting the write, it is considered safe.</li>
+                <li><strong>Commit:</strong> The Leader tells the followers to "commit." This moves data from the local Log into the actual Key-Value Store/Database layer, allowing clients to read it.</li>
+            </ol>
+        </section>
+
+        <!-- Topic 4 -->
+        <section class="card" style="animation-delay: 0.4s;">
+            <h2>4. Deep Dive: Leader Election</h2>
+            <p>This is the most critical part of Raft: ensuring there is only one leader at a time per Term. Every node is in one of three states:</p>
+            
+            <div class="flow-diagram">
+                <div class="node follower">Follower</div>
+                <div class="arrow">Timeout ➔</div>
+                <div class="node candidate">Candidate</div>
+                <div class="arrow">Wins Vote ➔</div>
+                <div class="node leader">Leader</div>
+            </div>
+
+            <h3>The Heartbeat & Election Trigger</h3>
+            <ul>
+                <li>The Leader periodically sends <strong>Heartbeats</strong> to all followers to say, "I am alive."</li>
+                <li>If a follower doesn't receive a heartbeat within a specific timeout window, it assumes the leader is dead and becomes a <strong>Candidate</strong>.</li>
+            </ul>
+
+            <h3>The Election Process</h3>
+            <ol style="margin-left: 20px; margin-bottom: 15px;">
+                <li>The Candidate votes for itself.</li>
+                <li>It increments its internal <strong>Term Number</strong> by 1.</li>
+                <li>It asks all other nodes for their vote.</li>
+            </ol>
+
+            <div class="term-box" style="border-left-color: var(--accent-warning);">
+                <strong style="color: var(--accent-warning);">🧠 GENIUS MECHANIC: Randomized Timeouts</strong><br>
+                If all followers realized the leader died at the exact same time, they would all vote for themselves, resulting in a tie where nobody gets a majority. To fix this, <strong>Heartbeat Timeouts are randomized</strong>. One node will always wake up slightly faster, declare itself a candidate, and start the election before others.
+            </div>
+
+            <h3>Voting Logic</h3>
+            <p>When a node is asked for a vote, it checks three conditions:</p>
+            <ul>
+                <li><strong>Term Check:</strong> Is the Candidate's term number higher than my local term number?</li>
+                <li><strong>Log Check:</strong> Is the Candidate's log <em>more up to date</em> than my local log? (Candidates cannot win if they are missing data).</li>
+                <li><strong>Vote Check:</strong> Have I already voted for someone else in this term? (Nodes get exactly 1 vote per term).</li>
+            </ul>
+        </section>
+
+        <!-- Topic 5 -->
+        <section class="card" style="animation-delay: 0.5s;">
+            <h2>5. Broadcasting Messages (ReplicateLog)</h2>
+            <p>Once a Leader is elected, it uses the <code>ReplicateLog</code> function to keep followers in sync. This acts as both a heartbeat and a data sync mechanism.</p>
+            
+            <p>When sending data, the Leader mentally splits its log into two parts:</p>
+            <ul>
+                <li><span class="highlight">Prefix:</span> All the older messages the Leader <em>assumes</em> the follower already has.</li>
+                <li><span class="highlight">Suffix:</span> The brand new messages the follower needs.</li>
+            </ul>
+            <p><strong>The Payload:</strong> The Leader sends the Follower the Suffix AND the <em>Term Number of the very last message in the Prefix</em>.</p>
+        </section>
+
+        <!-- Topic 6 -->
+        <section class="card" style="animation-delay: 0.6s;">
+            <h2>6. The Prefix Invariant</h2>
+            <p>This mathematical rule is what makes Raft completely safe from data corruption.</p>
+            
+            <div class="term-box" style="border-left-color: var(--accent-success);">
+                <strong>The Raft Invariant:</strong> If the logs on two replicas have the <em>same term number</em> at the <em>same index</em> in the log, they MUST be identically the same up to and including that index.
+            </div>
+
+            <h3>Visualizing the Invariant</h3>
+            
+            <div class="visual-container">
+                <!-- Valid State -->
+                <div style="text-align: center;">
+                    <p style="color: var(--accent-success); margin-bottom: 10px;"><strong>✅ Valid State</strong></p>
+                    <table class="log-table">
+                        <tr><th>Op</th><td>A</td><td class="cell-match">B</td><td>C</td></tr>
+                        <tr><th>Term</th><td>3</td><td class="cell-match">3</td><td>4</td></tr>
+                    </table>
+                    <br>
+                    <table class="log-table">
+                        <tr><th>Op</th><td>A</td><td class="cell-match">B</td><td>C</td></tr>
+                        <tr><th>Term</th><td>3</td><td class="cell-match">3</td><td>4</td></tr>
+                    </table>
+                </div>
+
+                <!-- Impossible State -->
+                <div style="text-align: center;">
+                    <p style="color: var(--accent-danger); margin-bottom: 10px;"><strong>❌ Impossible State</strong></p>
+                    <table class="log-table">
+                        <tr><th>Op</th><td class="cell-error">A</td><td class="cell-match">B</td><td>C</td></tr>
+                        <tr><th>Term</th><td class="cell-error">3</td><td class="cell-match">3</td><td>4</td></tr>
+                    </table>
+                    <br>
+                    <table class="log-table">
+                        <tr><th>Op</th><td class="cell-error">D</td><td class="cell-match">B</td><td>C</td></tr>
+                        <tr><th>Term</th><td class="cell-error">2</td><td class="cell-match">3</td><td>4</td></tr>
+                    </table>
+                </div>
+            </div>
+            
+            <p><strong>Why is the right side impossible?</strong></p>
+            <p>If Index 1 matches (Op: B, Term: 3), Index 0 MUST match. A leader could never have been elected in Term 3 if its earlier logs (Index 0) were missing or different, because it wouldn't have possessed the "most up-to-date log" required to win the election.</p>
+        </section>
+
+        <!-- Topic 7 -->
+        <section class="card" style="animation-delay: 0.7s;">
+            <h2>7. Conflict Resolution</h2>
+            <p>Because of the Prefix Invariant, followers can easily verify if they are in sync.</p>
+            
+            <h3>Scenario A: In Sync (Happy Path)</h3>
+            <p>The Follower matches the Leader's Prefix Term Number. It copies the Suffix over, overwriting any garbage data, and sends a "Success" acknowledgment.</p>
+
+            <h3>Scenario B: Out of Sync (Conflict!)</h3>
+            <p>The Follower checks the Prefix Term Number, and it <em>does not match</em> its local log. The Follower rejects the write.</p>
+            <div class="danger-box">
+                <strong>Leader's Fix (Shrinking the Prefix):</strong> The Leader realizes its assumption was wrong. It steps backward one index in the log, expands the Suffix, and tries again. It loops backward until it finds the exact index where the logs match, and overwrites the Follower from that point forward.
+            </div>
+
+            <h3>Scenario C: Deposed Leader</h3>
+            <p>If a Follower responds to the Leader with a <em>higher Term Number</em>, the Leader realizes it has been deposed. It immediately gives up leadership and reverts to a Follower state.</p>
+        </section>
+
+        <!-- Topic 8 -->
+        <section class="card" style="animation-delay: 0.8s; margin-bottom: 60px;">
+            <h2>8. Conclusion & Trade-offs</h2>
+            
+            <h3>Why use Raft?</h3>
+            <ul>
+                <li><strong>Highly Fault Tolerant:</strong> The whole network doesn't need to be online. You only need a Quorum (majority) alive to process writes.</li>
+                <li><strong>Understandable:</strong> Vastly easier to implement, trace, and debug than older algorithms like Paxos.</li>
+            </ul>
+
+            <h3>When is Raft NOT ideal?</h3>
+            <ul>
+                <li><strong>Network Heavy:</strong> It requires constant network calls (heartbeats, voting phases, and acknowledgments).</li>
+                <li><strong>Cross-Partition Transactions:</strong> Compared to "2-Phase Commit" (2PC), Raft is amazing for replicating a single log, but not ideal for atomic transactions that span across multiple different database partitions.</li>
+            </ul>
+        </section>
+
+    </main>
+
+    <!-- Scroll Progress and Fade-in Observer Logic -->
+    <script>
+        // Update Scroll Progress Bar
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        });
+
+        // Intersection Observer for gentle fade-in effect on scroll
+        const cards = document.querySelectorAll('.card');
+        
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animationPlayState = 'running';
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        cards.forEach(card => {
+            // Pause animation initially so it only runs when scrolled into view
+            card.style.animationPlayState = 'paused';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

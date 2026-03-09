@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Databases | Study Feed</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-primary: #38bdf8;
+            --accent-secondary: #818cf8;
+            --accent-success: #34d399;
+            --accent-danger: #f87171;
+            --border-color: #334155;
+            --code-bg: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Feed Layout */
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card h2 {
+            color: var(--accent-secondary);
+            margin-bottom: 1rem;
+            font-size: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card h3 {
+            color: var(--accent-primary);
+            margin: 1.5rem 0 0.5rem 0;
+            font-size: 1.25rem;
+        }
+
+        .card p, .card ul {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .card ul {
+            padding-left: 1.5rem;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            color: var(--accent-primary);
+            font-weight: bold;
+        }
+
+        /* Visualizations */
+        .viz-box {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        /* Viz 1: ETL Pipeline */
+        .etl-pipeline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            text-align: center;
+        }
+        .db-node {
+            background: var(--border-color);
+            padding: 1rem;
+            border-radius: 8px;
+            flex: 1;
+            font-weight: bold;
+        }
+        .db-node span { display: block; font-size: 0.85rem; color: var(--text-muted); font-weight: normal; margin-top: 5px;}
+        .etl-arrow {
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Viz 2: Star Schema */
+        .schema-diagram {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 1rem;
+            text-align: center;
+            align-items: center;
+        }
+        .schema-node {
+            background: #334155;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            border: 2px solid transparent;
+        }
+        .fact-table {
+            background: rgba(56, 189, 248, 0.1);
+            border-color: var(--accent-primary);
+            grid-column: 2;
+            grid-row: 2;
+            font-weight: bold;
+        }
+        .snowflake-node {
+            background: rgba(129, 140, 248, 0.1);
+            border-color: var(--accent-secondary);
+            border-style: dashed;
+        }
+
+        /* Viz 3: Compression Arrays */
+        .code-block {
+            font-family: 'Courier New', Courier, monospace;
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 6px;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+        .bit-1 { color: var(--accent-success); font-weight: bold; }
+        .bit-0 { color: var(--text-muted); }
+        .rle-val { color: var(--accent-primary); }
+
+        /* Viz 4: Data Cube Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color);
+            padding: 0.5rem;
+        }
+        .data-table th {
+            background: rgba(255,255,255,0.05);
+            color: var(--accent-primary);
+        }
+        .cube-total {
+            font-weight: bold;
+            color: var(--accent-success);
+            background: rgba(52, 211, 153, 0.1);
+        }
+
+        /* Callouts */
+        .callout {
+            border-left: 4px solid var(--accent-primary);
+            background: rgba(56, 189, 248, 0.05);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .callout-danger {
+            border-left-color: var(--accent-danger);
+            background: rgba(248, 113, 113, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <header>
+            <h1>Analytics Databases</h1>
+            <p>Comprehensive Study Notes & Visualizations</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="card">
+            <h2>1. The Need for Analytics Databases</h2>
+            <p>Businesses frequently run massive internal queries (e.g., A/B testing, data science analysis) that require <span class="highlight">full table scans</span>. Running these on the primary database disrupts live client interactions.</p>
+            <p><strong>The Solution:</strong> Set up a second, dedicated database purely for analytical processing.</p>
+            
+            <div class="viz-box">
+                <div class="etl-pipeline">
+                    <div class="db-node">
+                        Transactional DB
+                        <span>Live App Data</span>
+                    </div>
+                    <div class="etl-arrow">
+                        <span>ETL Batch Job</span>
+                        <span>(Extract, Transform, Load)</span>
+                        <span>━━━━━━━━━▶</span>
+                    </div>
+                    <div class="db-node" style="border: 2px solid var(--accent-primary);">
+                        Analytics DB
+                        <span>Querying / Analysis</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="callout">
+                <strong>Key Detail:</strong> ETL is scheduled as a <em>batch job</em> (e.g., running every hour or night) to copy data "some period of time after the fact" without overwhelming the live server.
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="card">
+            <h2>2. Schemas: Stars and Snowflakes</h2>
+            <p>Unlike transactional DBs (which use complex relationships to avoid duplication), analytics DBs use specific schemas to make querying massive datasets faster.</p>
+            
+            <h3>The Star Schema</h3>
+            <ul>
+                <li><strong>Fact Table:</strong> The massive central table recording events (e.g., a "sale"). It contains mostly foreign keys pointing outward.</li>
+                <li><strong>Dimension Tables:</strong> The tables containing descriptive attributes (e.g., Store info, Product details, Customer details).</li>
+            </ul>
+
+            <div class="viz-box schema-diagram">
+                <div class="schema-node">dim_product table</div>
+                <div class="schema-node">dim_store table</div>
+                <div></div>
+                
+                <div class="schema-node">dim_date table</div>
+                <div class="schema-node fact-table">fact_sales table<br><span style="font-weight:normal; font-size:0.8rem; color:var(--text-muted)">Foreign Keys: date_key, product_sk, store_sk...</span></div>
+                <div class="schema-node">dim_customer table</div>
+                
+                <div></div>
+                <div class="schema-node snowflake-node">dim_promotion table<br><span style="font-size:0.75rem">(Snowflake extension)</span></div>
+                <div></div>
+            </div>
+
+            <div class="callout">
+                <strong>Snowflake Schema:</strong> If a dimension table references <em>sub-dimension</em> tables (e.g., Dim_Promotion points to a SubDim_Ad_Type table), it is called a Snowflake schema.
+            </div>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="card">
+            <h2>3. Row vs. Column Oriented Storage</h2>
+            <p>How data is written to the physical disk dictates query speed.</p>
+            
+            <ul>
+                <li><strong>Row-Oriented (Transactional):</strong> Stores entire contents of a row together. Great for sequential access of a full user profile.</li>
+                <li><strong>Column-Oriented (Analytics):</strong> Analytical queries rarely need an entire row. They aggregate values of 1 or 2 columns over millions of rows. It stores the values of a specific column together in one file.</li>
+            </ul>
+
+            <div class="callout callout-danger">
+                <strong>The Golden Rule of Column Storage:</strong> Every column must be stored in the <em>exact same order</em>. The 10th value in the "Prices" file must belong to the same event as the 10th value in the "Dates" file.
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="card">
+            <h2>4. The Power of Compression</h2>
+            <p>Because column storage groups identical data types together, it can be heavily compressed, saving space and memory.</p>
+            
+            <h3>Example: Coding Proficiency (Out of 10)</h3>
+            <div class="code-block" style="margin-bottom: 1rem;">Raw Data: 8, 8, 8, 4, 5, 2, 2, 2, 2, 1</div>
+
+            <h3>Step 1: Bitmap Encodings</h3>
+            <p>Create a binary array for every unique value. <span class="bit-1">1</span> means the value is present, <span class="bit-0">0</span> means it is not.</p>
+            <div class="code-block">For val 8: <span class="bit-1">1 1 1</span> <span class="bit-0">0 0 0 0 0 0 0</span>
+For val 4: <span class="bit-0">0 0 0</span> <span class="bit-1">1</span> <span class="bit-0">0 0 0 0 0 0</span>
+For val 5: <span class="bit-0">0 0 0 0</span> <span class="bit-1">1</span> <span class="bit-0">0 0 0 0 0</span>
+For val 2: <span class="bit-0">0 0 0 0 0</span> <span class="bit-1">1 1 1 1</span> <span class="bit-0">0</span>
+For val 1: <span class="bit-0">0 0 0 0 0 0 0 0 0</span> <span class="bit-1">1</span></div>
+
+            <h3 style="margin-top: 1.5rem;">Step 2: Run-Length Encodings (RLE)</h3>
+            <p>Compress the bitmaps by counting the "runs" of consecutive digits. Format: <code>[Leading 0s], [1s], [Trailing 0s]</code></p>
+            <div class="code-block">For val 8: <span class="rle-val">0, 3, 7</span>  (Zero 0s, Three 1s, Seven 0s)
+For val 4: <span class="rle-val">3, 1, 6</span>
+For val 5: <span class="rle-val">4, 1, 6</span>
+For val 2: <span class="rle-val">5, 4, 1</span>
+For val 1: <span class="rle-val">9, 1, 0</span></div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="card">
+            <h2>5. Utilizing Compressed Data</h2>
+            <p>You can query data directly while it is compressed using CPU bitwise operations.</p>
+            
+            <ul>
+                <li><strong>AND Operations:</strong> To find where <code>Col A = 10 AND Col B = 20</code>, perform a Bitwise AND on their bitmaps.</li>
+                <li><strong>OR Operations:</strong> To find where <code>Col A = 10 OR Col A = 15</code>, perform a Bitwise OR.</li>
+            </ul>
+
+            <div class="callout">
+                <strong>Performance Boost:</strong> Compressed data is so small it can fit entirely inside the <strong>CPU's L1 Cache</strong>. The CPU can iterate in tight loops without function calls, resulting in lightning-fast queries.
+            </div>
+
+            <h3>Replicas for Sorting</h3>
+            <p>You can keep a complete replica of the DB sorted by a different column (like Date). This acts as a highly efficient index and groups identical values together, which allows Run-Length Encoding to compress the data even further.</p>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="card">
+            <h2>6. Writing to Column-Oriented Storage</h2>
+            <p>Writing row by row is highly inefficient here because you would have to open and modify every single column file on the disk simultaneously while keeping them perfectly sorted.</p>
+
+            <div class="viz-box">
+                <p style="text-align:center; font-weight:bold; margin-bottom: 1rem; color:var(--accent-secondary)">The LSM Tree Buffer</p>
+                <div class="schema-diagram" style="grid-template-columns: 1fr 0.5fr 1fr;">
+                    <div class="schema-node" style="border-color: var(--accent-success);">
+                        <strong>In-Memory (RAM)</strong><br>LSM Tree<br><em>(Accepts all new writes)</em>
+                    </div>
+                    <div class="etl-arrow">Batch Merge<br>━━▶</div>
+                    <div class="schema-node" style="border-color: var(--text-muted);">
+                        <strong>On-Disk</strong><br>Column Files<br><em>(Stores historical data)</em>
+                    </div>
+                </div>
+            </div>
+
+            <p>All writes go into an in-memory sorted tree (LSM tree). When it gets too big, it is written in bulk to the disk column files.</p>
+            <p><em>Trade-off:</em> Because recent data is in RAM and old data is on disk, <strong>Read queries must check both</strong> the LSM tree and the column files and merge the results.</p>
+        </article>
+
+        <!-- Topic 7 -->
+        <article class="card">
+            <h2>7. Materialized Views & Data Cubes</h2>
+            <p><strong>Materialized Views:</strong> The database pre-computes common, expensive aggregation queries so they don't have to be constantly rerun. The result is saved as if it were actual data.</p>
+            
+            <ul style="margin-bottom:1.5rem;">
+                <li><span class="highlight">Pros:</span> Instant query times for popular aggregations.</li>
+                <li><span class="highlight">Cons:</span> Writes take longer (the view must be updated when raw data changes) and less flexibility compared to raw querying.</li>
+            </ul>
+
+            <h3>Data Cube</h3>
+            <p>A special, multi-dimensional materialized view. Example: A pre-computed table showing the sum of sales for every <code>product_id</code> on every <code>date_key</code>.</p>
+
+            <div class="viz-box">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>date_key \ product_sk</th>
+                            <th>32</th>
+                            <th>33</th>
+                            <th>...</th>
+                            <th class="cube-total">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>140101</th>
+                            <td>149.60</td>
+                            <td>31.01</td>
+                            <td>...</td>
+                            <td class="cube-total">40710.53</td>
+                        </tr>
+                        <tr>
+                            <th>140102</th>
+                            <td>132.18</td>
+                            <td>19.78</td>
+                            <td>...</td>
+                            <td class="cube-total">73091.28</td>
+                        </tr>
+                        <tr>
+                            <th class="cube-total">Total</th>
+                            <td class="cube-total">14967.09</td>
+                            <td class="cube-total">5910.43</td>
+                            <td>...</td>
+                            <td class="cube-total" style="color:white; background:var(--accent-primary);">LOTS</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <!-- Topic 8 -->
+        <article class="card">
+            <h2>8. Final Summary</h2>
+            <ul style="list-style-type: '✅ ';">
+                <li><strong>Decouple</strong> analytics DBs from transactional DBs to protect live performance.</li>
+                <li>Use <strong>Column-oriented storage</strong> to isolate data types for fast aggregations.</li>
+                <li><strong>Compress</strong> column data using Bitmaps and RLE so it fits in the CPU Cache for fast tight-loop operations.</li>
+                <li>Use an in-memory <strong>LSM Tree</strong> to buffer writes before merging to column files on disk.</li>
+                <li>Utilize <strong>Materialized Views and Data Cubes</strong> to pre-calculate and cache your most popular, heavy metrics.</li>
+            </ul>
+        </article>
+
+    </main>
+
+    <!-- Script for scroll animation (Fade in on scroll) -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const cards = document.querySelectorAll('.card');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // Trigger when 15% of the card is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        // Optional: Unobserve after it becomes visible so it stays visible
+                        // observer.unobserve(entry.target); 
+                    }
+                });
+            }, observerOptions);
+
+            cards.forEach(card => {
+                observer.observe(card);
+            });
+            
+            // Immediately reveal the first card to prevent empty screen on load
+            setTimeout(() => {
+                if(cards.length > 0) {
+                    cards[0].classList.add('visible');
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

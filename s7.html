@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weak Isolation Levels Study Guide</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header Area */
+        header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Style for Feed Items */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        .highlight {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Visualizations Container */
+        .visualization {
+            background-color: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: monospace;
+            font-size: 0.95rem;
+        }
+
+        .viz-title {
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+
+        /* Specific Diagram Styles */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .timeline-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .timeline-row.error {
+            border-left-color: var(--danger);
+            background-color: var(--danger-light);
+        }
+
+        .timeline-row.success {
+            border-left-color: var(--success);
+            background-color: var(--success-light);
+        }
+
+        /* Tables for Data representations */
+        .db-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            background: white;
+        }
+
+        .db-table th, .db-table td {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .db-table th {
+            background-color: #f1f5f9;
+        }
+
+        .solution-box {
+            background-color: var(--success-light);
+            border-left: 4px solid var(--success);
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .solution-box strong {
+            color: var(--success);
+        }
+
+        .list-item {
+            margin-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .card {
+                padding: 1.5rem;
+            }
+            .timeline-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <header>
+            <h1>📚 Database Isolation Levels</h1>
+            <p>Continuous Study Guide • Scroll to learn</p>
+        </header>
+
+        <!-- Intro -->
+        <article class="card">
+            <h2>🎬 The Core Dilemma</h2>
+            <p>Transactions are a great abstraction for databases, ensuring data is perfectly safe. For perfect safety, a database must use <span class="highlight">Serializable Isolation</span> (processing transactions one-by-one, strictly sequentially).</p>
+            <p><strong>The Problem:</strong> True serializability is incredibly slow.</p>
+            <p><strong>The Solution:</strong> Databases offer <strong>"Weaker Isolation Levels."</strong> They sacrifice perfect safety for speed, meaning the database allows certain concurrency bugs to happen in exchange for high performance.</p>
+        </article>
+
+        <!-- Bug 1 & 2 -->
+        <article class="card">
+            <h2>🛑 1 & 2: Dirty Reads & Dirty Writes</h2>
+            <p><strong>Dirty Read:</strong> A client reads data written by another transaction that hasn't committed yet. If that transaction aborts, the client just read data that never truly existed.</p>
+            <p><strong>Dirty Write:</strong> A transaction overwrites data that was written by another uncommitted transaction.</p>
+            
+            <div class="visualization">
+                <div class="viz-title">Visualizing Dirty Read Prevention</div>
+                <div class="timeline">
+                    <div class="timeline-row">
+                        <span><strong>Database State:</strong></span>
+                        <span>kim's_man = "Kanye"</span>
+                    </div>
+                    <div class="timeline-row error">
+                        <span><strong>Transaction A (Uncommitted):</strong></span>
+                        <span>UPDATE kim's_man = "Pete"</span>
+                    </div>
+                    <div class="timeline-row success">
+                        <span><strong>Transaction B (Reads):</strong></span>
+                        <span>Reads "Kanye" (Ignores uncommitted "Pete")</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="solution-box">
+                <p><strong>🛡️ The Fix (Read Committed Isolation):</strong></p>
+                <p>For writes: Put a <strong>row-level lock</strong> on the object so only one writer can touch it at a time.</p>
+                <p>For reads: Do NOT use locks (too slow). Instead, the database <strong>remembers the old value</strong> ("Kanye") and serves it to readers until the new value ("Pete") is fully committed.</p>
+            </div>
+        </article>
+
+        <!-- Bug 3 -->
+        <article class="card">
+            <h2>⏱️ 3: Read Skew (Non-Repeatable Reads)</h2>
+            <p>This happens during long "read" queries (like analytics). While the query is running, other transactions are changing data. The long query reads different pieces of data at different points in time, resulting in an inconsistent view.</p>
+
+            <div class="visualization">
+                <div class="viz-title">The Venmo Anomaly (Read Skew)</div>
+                <div class="timeline">
+                    <div class="timeline-row">
+                        <span><strong>Start:</strong> You = $100 | Friend = $100</span>
+                        <span>Total = $200</span>
+                    </div>
+                    <div class="timeline-row">
+                        <span><strong>Step 1 (Query reads You):</strong></span>
+                        <span>Sees <strong>$100</strong></span>
+                    </div>
+                    <div class="timeline-row error">
+                        <span><strong>Step 2 (Friend transfers $50 to you):</strong></span>
+                        <span>You = $150 | Friend = $50</span>
+                    </div>
+                    <div class="timeline-row">
+                        <span><strong>Step 3 (Query reads Friend):</strong></span>
+                        <span>Sees <strong>$50</strong></span>
+                    </div>
+                    <div class="timeline-row error">
+                        <span><strong>Final Query Math:</strong> $100 + $50 = $150</span>
+                        <span>Wait, where did $50 go?!</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="solution-box">
+                <p><strong>📸 The Fix (Snapshot Isolation):</strong></p>
+                <p>Every transaction gets a monotonically increasing Transaction ID (TxID). When reading, a transaction can <strong>only see data written by TxIDs less than or equal to its own</strong>.</p>
+            </div>
+
+            <div class="visualization">
+                <div class="viz-title">Snapshot Isolation in Action</div>
+                <table class="db-table">
+                    <tr>
+                        <th>Record</th>
+                        <th>Value</th>
+                        <th>Written By TxID</th>
+                    </tr>
+                    <tr>
+                        <td>Jordan</td>
+                        <td>"brollic"</td>
+                        <td>14</td>
+                    </tr>
+                    <tr>
+                        <td>Bieber (Old)</td>
+                        <td>"uglier_than_jordan"</td>
+                        <td>12</td>
+                    </tr>
+                    <tr style="background-color: #fee2e2;">
+                        <td>Bieber (New)</td>
+                        <td>"ok_fine_good_looking"</td>
+                        <td>19</td>
+                    </tr>
+                </table>
+                <p style="margin-top: 1rem;">👉 <strong>Transaction 15</strong> wants to read both.<br>It reads Jordan (14 < 15).<br>It <strong>cannot</strong> read the new Bieber (19 > 15), so it reads the old Bieber (12 < 15).</p>
+            </div>
+        </article>
+
+        <!-- Bug 4 -->
+        <article class="card">
+            <h2>💸 4: Lost Updates</h2>
+            <p>The classic "Read-Modify-Write" bug. Two threads read an object, modify it, and write it back at the exact same time. One thread overwrites the other, destroying data.</p>
+
+            <div class="visualization">
+                <div class="viz-title">Lost Update Example</div>
+                <div class="timeline">
+                    <div class="timeline-row">
+                        <span><strong>Initial State:</strong></span>
+                        <span>Jordan_net_worth = $1,000,000</span>
+                    </div>
+                    <div class="timeline-row">
+                        <span><strong>Thread 1 & 2 Read:</strong></span>
+                        <span>Both read $1,000,000</span>
+                    </div>
+                    <div class="timeline-row">
+                        <span><strong>Thread 1 & 2 Modify:</strong></span>
+                        <span>Both add $1,000,000 (Math: $1M + $1M = $2M)</span>
+                    </div>
+                    <div class="timeline-row error">
+                        <span><strong>Thread 1 & 2 Write:</strong></span>
+                        <span>Both write $2,000,000 to the DB.</span>
+                    </div>
+                    <p style="margin-top: 0.5rem; text-align: center; color: var(--danger); font-weight: bold;">Result: $2M instead of $3M. You've been conned out of a million dollars!</p>
+                </div>
+            </div>
+
+            <div class="solution-box">
+                <p><strong>🛠️ Solutions for Lost Updates:</strong></p>
+                <ul>
+                    <li class="list-item"><strong>Atomic Writes:</strong> DB built-in math functions (e.g., `compare_and_set`).</li>
+                    <li class="list-item"><strong>Explicit Locks:</strong> App code uses `FOR UPDATE` in SQL (can cause bugs if developers forget to release locks).</li>
+                    <li class="list-item"><strong>Automatic Detection:</strong> DB uses Snapshot Isolation to detect if the row changed between your read and write, forcing a rollback/retry.</li>
+                </ul>
+                <p style="margin-top: 1rem; font-size: 0.9rem;"><em>Note: In distributed multi-leader databases, these fail. You must store conflicts as siblings and use conflict resolution logic (like CRDTs).</em></p>
+            </div>
+        </article>
+
+        <!-- Bug 5 -->
+        <article class="card">
+            <h2>👯 5: Write Skew</h2>
+            <p>Two transactions read the <em>same set</em> of objects to check a condition (predicate). They both decide it's safe to write, but they modify <em>different</em> objects in the set, accidentally breaking the rule.</p>
+
+            <div class="visualization">
+                <div class="viz-title">The VIP Table (Max 3 People)</div>
+                <table class="db-table">
+                    <tr><th>ID</th><th>Name</th><th>Table</th></tr>
+                    <tr><td>1</td><td>Jordan</td><td>1</td></tr>
+                    <tr><td>2</td><td>Lindsay Lohan</td><td>1</td></tr>
+                </table>
+                <p style="margin-top: 1rem;"><strong>Timeline:</strong><br>
+                1. Thread A & B read Table 1. They see 2 people. Rule: Max 3.<br>
+                2. Thread A decides it's safe to add Kate Upton.<br>
+                3. Thread B decides it's safe to add Megan Fox.<br>
+                </p>
+                <div class="timeline-row error" style="margin-top: 1rem;">
+                    <span><strong>Result:</strong> Kate and Megan are both added.</span>
+                    <span>Table 1 now has 4 people. Invariant broken!</span>
+                </div>
+            </div>
+
+            <div class="solution-box">
+                <p><strong>🔒 The Fix (Predicate Locks):</strong></p>
+                <p>You apply a lock to <strong>all the rows you read</strong> to make your decision. Thread B is blocked from reading the VIP table until Thread A finishes inserting Kate.</p>
+            </div>
+        </article>
+
+        <!-- Phantoms -->
+        <article class="card">
+            <h2>👻 Phantoms & Materializing Conflicts</h2>
+            <p>A "Phantom" is a Write Skew bug where both transactions are trying to create a <strong>brand new row</strong>. The problem? You cannot put a Predicate Lock on a row that doesn't exist yet!</p>
+            
+            <p><strong>Example:</strong> Two people check if a meeting room is empty at 2:00 PM. No row exists. They both insert a booking row. Overbooked!</p>
+
+            <div class="visualization">
+                <div class="viz-title">Materializing Conflicts</div>
+                <div class="timeline">
+                    <div class="timeline-row error">
+                        <span><strong>Without Materialization:</strong></span>
+                        <span>Locking fails because 2:00PM row = NULL</span>
+                    </div>
+                    <div class="timeline-row success">
+                        <span><strong>With Materialization:</strong></span>
+                        <span>Background script generates empty dummy rows for the whole week.</span>
+                    </div>
+                    <div class="timeline-row success">
+                        <span><strong>Result:</strong></span>
+                        <span>Transactions can now lock the "empty" 2:00PM dummy row!</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Summary -->
+        <article class="card">
+            <h2>📝 Final Summary & Instructor Advice</h2>
+            <ul>
+                <li class="list-item"><strong>Read Committed:</strong> Prevents dirty reads & writes. Fastest, least safe.</li>
+                <li class="list-item"><strong>Snapshot Isolation:</strong> Prevents read skew via TxIDs. Detects lost updates. Great middle ground.</li>
+                <li class="list-item"><strong>Predicate Locks & Materialization:</strong> Prevents write skew and phantoms.</li>
+            </ul>
+            <div class="solution-box">
+                <p><strong>💡 The Ultimate Takeaway:</strong></p>
+                <p>Using weak isolation keeps databases fast because locking is minimal. <strong>However</strong>, if your application can afford the performance hit, simply using true <strong>Serializable Isolation</strong> is best. It entirely removes the need for developers to reason about (and potentially mess up) concurrency logic!</p>
+            </div>
+        </article>
+
+    </main>
+
+</body>
+</html>

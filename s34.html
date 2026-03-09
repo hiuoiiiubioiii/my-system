@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Aurora System Design Notes</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --surface-color: #2a2a2a;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --memory-color: #00ffff;
+            --disk-color: #ffff00;
+            --accent: #ff9900; /* AWS Orange */
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        /* Container for the vertical feed */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 0 40px;
+            border-bottom: 2px solid var(--surface-color);
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Topic Cards */
+        .topic-card {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border-left: 5px solid var(--accent);
+        }
+
+        .topic-card h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            margin: 20px 0 10px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ul {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        /* --- CSS Visualizations --- */
+        .visual-container {
+            background-color: #111;
+            border-radius: 8px;
+            padding: 30px 20px;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            overflow-x: auto;
+        }
+
+        .box {
+            padding: 15px 20px;
+            text-align: center;
+            font-weight: bold;
+            color: #000;
+            border-radius: 4px;
+            min-width: 200px;
+        }
+
+        .box-memory {
+            background-color: var(--memory-color);
+        }
+
+        .box-disk {
+            background-color: var(--disk-color);
+        }
+
+        .arrow-down {
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Complex Diagram: Replication */
+        .replica-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            width: 100%;
+            margin-top: 20px;
+            position: relative;
+            padding-top: 20px;
+            border-top: 1px dashed #555;
+        }
+
+        .replica-grid .box-disk {
+            min-width: 0;
+            font-size: 0.8rem;
+            padding: 10px 5px;
+            word-wrap: break-word;
+        }
+
+        .az-labels {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-bottom: -10px;
+        }
+
+        .log-index {
+            color: white;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        /* Deep Dive Box */
+        .deep-dive {
+            background-color: rgba(255, 153, 0, 0.1);
+            border: 1px solid rgba(255, 153, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        <header>
+            <h1>AWS Aurora System Design</h1>
+            <p>Complete student notes with in-depth breakdowns and visual diagrams.<br>Scroll to begin.</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="topic-card">
+            <h2>1. Background (What is Aurora?)</h2>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>AWS Aurora is a <span class="highlight">NewSQL</span> database.</li>
+                <li>Claims a <span class="highlight">35x performance boost</span> over running traditional MySQL in the cloud.</li>
+                <li>Uses concepts like quorum writes for replicated logs and clever caching.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p><strong>What is NewSQL?</strong> It’s a database that provides the familiar SQL interface (like MySQL or Postgres) but is built on a modern, distributed, cloud-scale architecture.</p>
+                <p>The goal of this breakdown is to understand exactly <em>how</em> Amazon achieves that massive 35x performance improvement by breaking down traditional bottlenecks.</p>
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="topic-card">
+            <h2>2. Traditional RDBMS Design (The Old Way)</h2>
+            <div class="visual-container">
+                <div class="box box-memory">Memory (Page Cache)</div>
+                <div class="box box-disk">Disk (B-Tree)</div>
+            </div>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Pages from the disk that need to be read/modified are loaded from disk into memory.</li>
+                <li>If modified, an entry is appended to the write-ahead log (WAL).</li>
+                <li>Changes are eventually written back to the disk.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>In a traditional database (like standard MySQL), compute (memory) and storage (disk) are tightly coupled on the same server.</p>
+                <p><strong>The Workflow:</strong> Data is stored on disk in a <strong>B-Tree</strong> structure. When queried, parts of the B-Tree are loaded into the <strong>Page Cache (Memory)</strong>. If you modify data, the change is written to a <strong>Write-Ahead Log (WAL)</strong>. *Eventually*, the whole modified memory page is written back to the disk.</p>
+            </div>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="topic-card">
+            <h2>3. Aurora Design (The Core Innovation)</h2>
+            <div class="visual-container">
+                <div class="box box-memory">Memory Server (Page Cache)</div>
+                <div class="arrow-down">↓ Log Entries (WAL) ↓</div>
+                <div class="box box-disk">Disk Server (B-Tree)</div>
+            </div>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Aurora <span class="highlight">decouples</span> the cache and disk onto two different servers!</li>
+                <li>Takes too long to send entire modified pages over the network (typically 8kb).</li>
+                <li>Instead, it just sends new write-ahead log entries. Let the disk server derive state locally.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p><strong>The Problem:</strong> Sending an entire modified memory page (typically 8 Kilobytes) over a network to a storage server takes too much bandwidth. Every single write sending 8KB is highly inefficient.</p>
+                <p><strong>The Aurora Solution:</strong> Do not send the whole page. Instead, <strong>only send the log entry (Write-Ahead Log)</strong>. The log entry is tiny. The storage (disk) server receives this tiny entry and applies the update locally in the background.</p>
+                <p>Because Memory and Disk are completely decoupled, they can now be scaled and replicated independently.</p>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="topic-card">
+            <h2>4. Replication of Storage & Quorum Writes</h2>
+            <div class="visual-container">
+                <div class="box box-memory">Memory (Database Node)</div>
+                <div class="arrow-down">↓</div>
+                <div class="az-labels">
+                    <span>Availability Zone 1</span>
+                    <span>Availability Zone 2</span>
+                    <span>Availability Zone 3</span>
+                </div>
+                <div class="replica-grid">
+                    <div class="box box-disk">Disk</div>
+                    <div class="box box-disk">Disk</div>
+                    <div class="box box-disk">Disk</div>
+                    <div class="box box-disk">Disk</div>
+                    <div class="box box-disk">Disk</div>
+                    <div class="box box-disk">Disk</div>
+                </div>
+                <p style="color:#888; margin-top:10px; font-size: 0.9rem;">Protection Group (6 Nodes)</p>
+            </div>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Storage is replicated across 6 nodes, split across 3 Availability Zones.</li>
+                <li>Writes require a <span class="highlight">quorum of 4 out of 6 nodes</span> to be successful.</li>
+                <li>Ensures high availability if an entire availability zone goes down.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>Storage is grouped into a "Protection Group" of 6 disk servers. Why 3 different Availability Zones? Fault tolerance. If a whole data center burns down, you still have data in two other locations.</p>
+                <p><strong>How a Write Works:</strong> The Database Node sends the tiny log entry to all 6 storage nodes simultaneously. It waits for a positive "I got it" response from just <strong>4 out of the 6</strong>. Once 4 nodes confirm, the write is considered committed. This prevents the system from hanging if a node is slow.</p>
+            </div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="topic-card">
+            <h2>5. Lightning Fast Reads</h2>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Reads <strong>do not</strong> have to use a quorum!</li>
+                <li>The caching layer simply looks at its log to see what the log position is.</li>
+                <li>It then issues a read from <em>just one</em> up-to-date replica.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>Because the Database Node tracks its own Write-Ahead Log, it knows exactly what the most current "log position" is. When a read request comes in, it looks at its 6 storage replicas, finds just <strong>one</strong> that is up-to-date with the current log position, and reads directly from it. This makes reads incredibly fast and bypasses the network overhead of checking multiple nodes.</p>
+            </div>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="topic-card">
+            <h2>6. Scaling the Caching Layer</h2>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Can add read-only cache replicas (up to 15 nodes).</li>
+                <li>The main leader cache asynchronously propagates log changes to them.</li>
+                <li>Read-only replicas issue <span class="highlight">Eventually Consistent</span> reads (reads can be slightly stale).</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>If your application has heavy read traffic, you can scale the *Memory* layer independently. Only one node is the Leader (handles writes). The Leader asynchronously sends its Write-Ahead Log to the replicas.</p>
+                <p>Because this happens asynchronously, a replica might be a split-second behind. Therefore, reading from a replica is "Eventually Consistent." If you need absolute perfect consistency, you route the read back to the primary Leader node.</p>
+            </div>
+        </article>
+
+        <!-- Topic 7 -->
+        <article class="topic-card">
+            <h2>7. Failure Scenario 1: Database Node Crashes</h2>
+            <div class="visual-container">
+                <div class="replica-grid">
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index">100</div>
+                    </div>
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index" style="color:#ff4444">101</div>
+                    </div>
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index">100</div>
+                    </div>
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index" style="color:#ff4444">102</div>
+                    </div>
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index">100</div>
+                    </div>
+                    <div>
+                        <div class="box box-disk">Disk</div>
+                        <div class="log-index">100</div>
+                    </div>
+                </div>
+            </div>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>If a new node takes over as leader, it must ensure uncommitted writes are reverted.</li>
+                <li>It uses a <span class="highlight">Quorum Read</span> to figure out the greatest committed log position.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>Imagine the Leader node sends out writes (indexes 101 and 102) but crashes <em>before</em> getting the 4 responses needed to officially commit them. A new node is promoted to Leader, but it doesn't know what was committed.</p>
+                <p><strong>The Fix:</strong> The new Leader performs a <strong>Quorum Read</strong> (asks 4 out of 6 nodes for their highest index). It realizes that the highest log index that successfully reached a majority is <strong>100</strong>. It commands the storage nodes to delete/revert anything higher than 100 (discarding 101 and 102). The system is safely synced.</p>
+            </div>
+        </article>
+
+        <!-- Topic 8 -->
+        <article class="topic-card">
+            <h2>8. Failure Scenario 2: Storage Node Crashes</h2>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Data is partitioned into <span class="highlight">10GB chunks</span>.</li>
+                <li>To avoid network bottlenecks when replacing a failed node, shards are sent to a variety of nodes to parallelize copying.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p>If you have a 1-Terabyte database, Aurora chunks it into 100 segments of 10GB each. If a storage server holding hundreds of these chunks dies, copying all that data sequentially to a new server would take hours and clog the network.</p>
+                <p><strong>The Fix:</strong> Aurora uses consistent hashing. When a node dies, the remaining nodes work <em>together</em> in parallel to recreate those 10GB chunks across the network. Because many servers share the workload, recovery is lightning fast.</p>
+            </div>
+        </article>
+
+        <!-- Topic 9 -->
+        <article class="topic-card">
+            <h2>9. Conclusion & Interview Tips</h2>
+            <h3>📺 On the Screen</h3>
+            <ul>
+                <li>Aurora decouples storage and caching while maintaining high availability and strong consistency.</li>
+                <li>Highly useful to mention in a SQL vs. NoSQL interview discussion.</li>
+            </ul>
+            <div class="deep-dive">
+                <h3>🧠 Instructor’s Deep Dive</h3>
+                <p><strong>The SQL vs. NoSQL Debate:</strong> In interviews, candidates often say, "SQL doesn't scale well horizontally; use NoSQL."</p>
+                <p><strong>The Counter-Argument:</strong> You can drop AWS Aurora in the interview! It proves that by using NewSQL concepts (decoupling storage/compute, sending WAL logs instead of full B-Tree pages, using quorum writes), you <em>can</em> scale relational databases horizontally while keeping strong consistency, normalized data, and ACID guarantees.</p>
+            </div>
+        </article>
+
+    </div>
+
+</body>
+</html>

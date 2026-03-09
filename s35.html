@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MongoDB: Complete Study Notes Feed</title>
+    <style>
+        /* Global Styles */
+        :root {
+            --bg-main: #0f0f11;
+            --bg-card: #1c1c1f;
+            --bg-slide: #222222;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a5;
+            --accent: #4caf50;
+            --accent-red: #f44336;
+            --font-main: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --font-code: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.6;
+        }
+
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(180deg, #111 0%, #0f0f11 100%);
+            border-bottom: 1px solid #333;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: #fff;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 10px auto 0;
+        }
+
+        /* Continuous Vertical Feed Layout */
+        .feed-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px; /* Space between topics */
+        }
+
+        .topic-card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #2a2a2e;
+        }
+
+        .topic-header {
+            padding: 20px 30px;
+            background-color: #252529;
+            border-bottom: 1px solid #333;
+        }
+
+        .topic-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            color: #fff;
+        }
+
+        /* Slide Visualization Recreation */
+        .visualization-slide {
+            background-color: var(--bg-slide);
+            padding: 40px;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #333;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-title {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            font-weight: 500;
+            color: #fff;
+        }
+
+        .slide-text {
+            color: #ccc;
+        }
+
+        /* Code/JSON block styles for Data Format */
+        .json-block-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .json-block {
+            background-color: #ccc;
+            color: #000;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: var(--font-code);
+            font-size: 0.95rem;
+            flex: 1;
+            white-space: pre-wrap;
+        }
+
+        .slide-note-text {
+            flex: 1;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+
+        /* Bullet Points for slides */
+        .slide-bullets {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .slide-bullets li {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .slide-bullets li::before {
+            content: "●";
+            position: absolute;
+            left: 0;
+            color: #888;
+        }
+
+        .slide-bullets li.sub-bullet {
+            padding-left: 50px;
+            font-size: 1rem;
+        }
+        
+        .slide-bullets li.sub-bullet::before {
+            content: "○";
+            left: 25px;
+        }
+
+        .bullet-green::before { color: var(--accent) !important; }
+        .bullet-red::before { color: var(--accent-red) !important; }
+        .text-green { color: var(--accent); }
+        .text-red { color: var(--accent-red); }
+
+        /* Instructor's Notes Section */
+        .instructor-notes {
+            padding: 30px;
+        }
+
+        .instructor-notes h3 {
+            color: var(--accent);
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instructor-notes h3::before {
+            content: "📝";
+            font-size: 1.5rem;
+        }
+
+        .instructor-notes p {
+            margin-bottom: 15px;
+        }
+
+        .instructor-notes ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .instructor-notes li {
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            background-color: rgba(76, 175, 80, 0.15);
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #81c784;
+            font-weight: bold;
+        }
+
+        .warning-highlight {
+            background-color: rgba(244, 67, 54, 0.15);
+            padding: 2px 5px;
+            border-radius: 3px;
+            color: #e57373;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>MongoDB: Complete Study Notes</h1>
+        <p>Vertical feed layout: Scroll continuously to review all visualizations and in-depth instructor explanations.</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- Section 1: Introduction -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>1. Introduction & Overview</h2>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <p>The instructor opens by questioning if MongoDB even *needs* a dedicated video given its massive popularity and ubiquity in the industry. However, he concludes it's essential to cover because it functions as the <span class="highlight">"Jack of all trades"</span> database.</p>
+                <ul>
+                    <li><strong>Lack of Strict Constraints:</strong> Developers can rely on it for a massive variety of functionalities.</li>
+                    <li><strong>Generalist Nature:</strong> You can throw your data into MongoDB and know most functionalities are supported, even if it's not always the absolute *fastest* possible option for highly specialized, niche tasks.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 2: Background -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>2. Background & Positioning</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">Background</div>
+                <div class="slide-text">
+                    MongoDB is yet another immensely popular NoSQL database widely used in industry. Compared to an RDBMS, or something with a much different intended use case such as Cassandra, it seems that MongoDB is a very flexible and middle of the road solution, such that developers have more freedom to use both some relational concepts in their data patterns, while still generally trying to keep denormalized data when possible.
+                </div>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <p>MongoDB uses a <strong>document-oriented format</strong>. It actively positions itself in the middle ground of the database spectrum:</p>
+                <ul>
+                    <li>It is <strong>not as rigid</strong> as a Relational Database Management System (RDBMS like MySQL or PostgreSQL) which requires strict table schemas and joins.</li>
+                    <li>It <strong>doesn't force the extreme constraints</strong> of a specialized NoSQL database like Cassandra, where everything must be planned perfectly in advance and constrained to specific partitions.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 3: Data Format -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>3. Data Format (Document Database)</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">Data Format</div>
+                <div class="slide-text">MongoDB is a document database - documents are stored within collections, and in turn each document itself can have other nested collections.</div>
+                
+                <div class="json-block-container">
+                    <div style="flex: 1;">
+                        <p style="margin-bottom: 5px; color: #fff;">Famous Actresses</p>
+                        <div class="json-block">
+{
+  Name: Riley Reid
+  Age: 30
+  Videos: 
+  [SUBCOLLECTION]
+}
+
+{
+  Name: Mia Khalifa
+  Age: 29
+  Videos: 
+  [SUBCOLLECTION]
+}</div>
+                    </div>
+                    <div class="slide-note-text">
+                        Note that documents do not follow a set schema: within a collection it is advisable to have generally similar documents but there is nothing enforcing a format, which allows for adjustable schemas over time!
+                    </div>
+                </div>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <ul>
+                    <li><strong>Data Locality:</strong> By nesting data (e.g., storing all of an actress's videos within a sub-collection inside their main document), MongoDB greatly increases data locality. You can fetch all related information in <em>one single disk read</em>, rather than performing complex "joins" across multiple tables as you would in an RDBMS.</li>
+                    <li><strong>Flexible Schema:</strong> The lack of a set schema is a massive advantage for developers. Applications evolve. With MongoDB, you don't need to perform major database migrations or experience downtime just to add a new field (like 'Height' or 'Weight' to a single document).</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 4: Architectural Overview -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>4. Architectural Overview</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">Architectural Overview</div>
+                <ul class="slide-bullets slide-text">
+                    <li>Within a collection, database partitions the documents based off of a shard key per record</li>
+                    <li>Within each shard, availability is ensured via single leader replication</li>
+                    <li>MongoDB uses a B-tree based storage engine</li>
+                    <li class="sub-bullet">Prioritizes read speeds over write speeds</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <ul>
+                    <li><strong>Sharding:</strong> For massive amounts of data, MongoDB splits it across different partitions (shards) using a shard key. If you don't provide one, Mongo generates it automatically. This dictates where data lives.</li>
+                    <li><strong>Replication & Downtime:</strong> The system uses <span class="highlight">Single Leader Replication</span>. The leader takes writes and updates followers asynchronously. <em>Crucially</em>, Mongo typically only allows reads from the leader to ensure consistency. If the leader fails, you will experience a few seconds of <strong>read downtime</strong> until a follower is elected as the new leader (unless you specifically configure it to allow stale reads from followers).</li>
+                    <li><strong>B-Tree vs. LSM:</strong> Unlike Cassandra (which uses LSM trees optimized for massive write volumes), MongoDB sticks to the traditional B-tree (similar to an RDBMS). This makes read throughput efficient, but sacrifices some write speed.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 5: Cross Partition Operations -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>5. Cross Partition Operations</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">Cross Partition Operations</div>
+                <ul class="slide-bullets slide-text">
+                    <li>Mongo enables multi document transactions (either over the same or different shards)</li>
+                    <li>Mongo enables parallelized queries over the entire data set (over the network), can be sped up via the use of secondary indexes</li>
+                    <li class="sub-bullet">Secondary indexes can be applied even on deeply nested data</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <p>This is where MongoDB offers vast freedom compared to strictly constrained databases like Cassandra. You are not forced to keep all related data on a single partition just to operate on it.</p>
+                <ul>
+                    <li><strong>Transactions:</strong> You can perform atomic edits on multiple documents simultaneously. This ensures consistency even if those documents live on completely different network shards.</li>
+                    <li><strong>Flexibility via Secondary Indexes:</strong> Secondary indexes allow you to query your data in entirely new ways as your application grows. You don't have to perfectly predict your data access patterns on day one. Even if you design your schema poorly initially, secondary indexes allow you to "fall back" and still retrieve the data you need dynamically.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 6: Mongo vs RDBMS -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>6. MongoDB vs. Relational Databases</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">MongoDB vs. Relational Databases</div>
+                <div class="slide-text" style="margin-bottom: 15px;">In comparison to a relational database, MongoDB exhibits the following properties:</div>
+                <ul class="slide-bullets slide-text">
+                    <li class="bullet-green text-green">Flexible schema</li>
+                    <li class="bullet-green text-green">The ability to design an application with data locality in mind via a highly nested document structure</li>
+                    <li class="bullet-red text-red">Lack of normalized data may require having to change data in multiple places</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <ul>
+                    <li><strong>The Pro:</strong> Instead of dealing with strict tables and complex network joins, MongoDB gives you a many-to-one relationship stored directly in one place on the disk (high data locality).</li>
+                    <li><strong>The Con:</strong> Because NoSQL databases encourage denormalization (copying data rather than linking to it), updating a piece of shared information might require atomic updates across multiple documents to avoid data inconsistencies.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 7: Mongo vs Cassandra -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>7. MongoDB vs. Cassandra</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">MongoDB vs. Cassandra</div>
+                <div class="slide-text" style="margin-bottom: 15px;">In comparison to a relational database, MongoDB exhibits the following properties:</div>
+                <ul class="slide-bullets slide-text">
+                    <li class="bullet-green text-green">More expressive document data model</li>
+                    <li class="sub-bullet text-green">Although with a bit of tinkering on a clustering key you can effectively organize Cassandra rows in a subcollection type of ordering</li>
+                    <li class="bullet-green text-green">The ability to query data using complicated secondary indexes, as well as making operations (both writes and queries) spanning multiple shards</li>
+                    <li class="bullet-green text-green">B-Tree architecture is better for read throughput</li>
+                    <li class="bullet-red text-red">Use of single leader replication and B-Tree as opposed to LSM trees and leaderless replication means that write throughput does not scale linearly to the number of nodes in the cluster</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown</h3>
+                <ul>
+                    <li><strong>Data Modeling:</strong> While you *can* hack Cassandra to emulate sub-collections using specific clustering keys with UUID prefixes, MongoDB supports this natively and intuitively.</li>
+                    <li><strong>Future-Proofing:</strong> In Cassandra, if your queries change later and require joining data across partitions, the database becomes unfeasible. MongoDB's flexibility allows you to adapt on the fly without changing databases entirely.</li>
+                    <li><strong>Scaling Limit (The Trade-off):</strong> Because MongoDB uses a single leader and a B-Tree, its write throughput <span class="warning-highlight">does not scale perfectly linearly</span> as you add more nodes to a cluster. Cassandra handles massive write scales much better due to its leaderless, LSM-tree architecture.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 8: Conclusion & Interview Tips -->
+        <section class="topic-card">
+            <div class="topic-header">
+                <h2>8. Conclusion & Systems Design Interview Strategy</h2>
+            </div>
+            <div class="visualization-slide">
+                <div class="slide-title">Conclusion</div>
+                <div class="slide-text">
+                    <p>Ultimately, it seems like MongoDB is a middle of the road solution - we use it when we want the ability to make complicated queries on data, but have a more flexible and expressive document model. Additionally, MongoDB is useful if we would like to use Cassandra for high write throughput, but ultimately our data access patterns do not allow us to keep all of our operations on just one shard.</p>
+                    <p>In this sense, the architecture of MongoDB does not make it a “specialized” database for any specific type of task, but rather just an extremely flexible and intuitive one that has a large feature set while avoiding the pitfalls of relational data (compared to Cassandra and MySQL which are restrictive in their own ways).</p>
+                </div>
+            </div>
+            <div class="instructor-notes">
+                <h3>Instructor's Breakdown & Vital Interview Advice</h3>
+                <p><strong>In the Real World:</strong> MongoDB is excellent for getting an MVP (Minimum Viable Product) off the ground. Its scalability and flexible feature set make it highly maintainable as user requirements dynamically evolve over time.</p>
+                
+                <p><strong>In Systems Design Interviews: <span class="warning-highlight">DO NOT DEFAULT TO MONGODB.</span></strong></p>
+                <ul>
+                    <li>Systems design interviews are not about application maintainability or ease of development. They are about solving specific, extreme scaling bottlenecks (e.g., "How do you handle 10x user growth tomorrow?").</li>
+                    <li>Because MongoDB is a generalist "jack of all trades", there is almost always a more specialized, mathematically optimal database to suggest for the specific scenario the interviewer presents.</li>
+                    <li>Use Relational DBs for strict normalization, or Cassandra for linear write scaling. Avoid Mongo in the interview room unless specifically discussing flexible schema evolution.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>

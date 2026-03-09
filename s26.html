@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Memcached vs. Redis</title>
+    <style>
+        /* Base Variables & Reset */
+        :root {
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg: #ffffff;
+            --primary: #2d3436;
+            --accent-redis: #d63031;
+            --accent-memcached: #0984e3;
+            --accent-tip: #00b894;
+            --border-radius: 12px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        /* Layout Container */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Header Styling */
+        header {
+            text-align: center;
+            padding: 40px 0 20px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #636e72;
+            font-size: 1.1rem;
+        }
+
+        .disclaimer {
+            display: inline-block;
+            background-color: #ffeaa7;
+            color: #d35400;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+
+        /* Card (Section) Styling */
+        .topic-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-top: 5px solid var(--primary);
+        }
+
+        .topic-card.memcached { border-top-color: var(--accent-memcached); }
+        .topic-card.redis { border-top-color: var(--accent-redis); }
+
+        .topic-card h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .highlight-box {
+            background: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            margin: 15px 0;
+        }
+
+        ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* --- VISUALIZATIONS CSS --- */
+        
+        /* 1. RAM vs Disk */
+        .viz-ram-disk {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .viz-block {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            font-weight: bold;
+        }
+        .arrow-fast {
+            color: var(--accent-tip);
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        /* 2. Consistent Hashing Ring */
+        .viz-ring-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 30px 0;
+        }
+        .hashing-ring {
+            width: 200px;
+            height: 200px;
+            border: 4px dashed var(--accent-memcached);
+            border-radius: 50%;
+            position: relative;
+        }
+        .node {
+            width: 30px;
+            height: 30px;
+            background: var(--accent-memcached);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .node-1 { top: -15px; left: 85px; }
+        .node-2 { bottom: 20px; right: -5px; }
+        .node-3 { bottom: 20px; left: -5px; }
+        .gutter-node {
+            background: #fdcb6e;
+            color: #2d3436;
+            margin-top: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            border: 2px dashed #e17055;
+        }
+
+        /* 3. Redis Data Types & Persistence */
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .data-tag {
+            background: #ffeaa7;
+            color: #d35400;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        .persistence-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .persist-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .persist-card h4 { color: var(--accent-redis); margin-bottom: 10px;}
+
+        /* 4. Redis Cluster Architecture */
+        .cluster-viz {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fdfbfb;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .master-node {
+            background: var(--accent-redis);
+            color: white;
+            padding: 10px 40px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .replicas {
+            display: flex;
+            gap: 20px;
+        }
+        .replica-node {
+            background: #ff7675;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        .hash-slots {
+            width: 100%;
+            height: 20px;
+            background: linear-gradient(90deg, #74b9ff 33%, #a29bfe 33%, #a29bfe 66%, #55efc4 66%);
+            border-radius: 10px;
+            margin-top: 20px;
+            position: relative;
+        }
+        .hash-label {
+            text-align: center;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            color: #636e72;
+        }
+
+        /* 5. Pro Tip Box */
+        .pro-tip {
+            background: #e8f8f5;
+            border-left: 5px solid var(--accent-tip);
+            padding: 20px;
+            border-radius: 0 var(--border-radius) var(--border-radius) 0;
+            margin-top: 20px;
+        }
+        .pro-tip h3 {
+            color: var(--accent-tip);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .persistence-grid {
+                grid-template-columns: 1fr;
+            }
+            .viz-ram-disk {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .arrow-fast { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Memcached vs. Redis</h1>
+        <p>In-Depth System Design Study Notes</p>
+        <div class="disclaimer">🍺 Instructor Note: Re-recorded for clarity after a late-night session!</div>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- SECTION 1: Background -->
+        <section class="topic-card">
+            <h2>1. Background: The Purpose of Caching</h2>
+            <div class="content-grid">
+                <p>When designing large-scale distributed systems, caching is essential. Redis and Memcached are the industry standards for highly performant data access.</p>
+                
+                <div class="viz-ram-disk">
+                    <div class="viz-block">Hard Disk (Traditional DB)</div>
+                    <div class="arrow-fast">Orders of Magnitude Faster ➔</div>
+                    <div class="viz-block" style="border: 2px solid var(--accent-tip);">RAM (Cache Stores)</div>
+                </div>
+
+                <div class="highlight-box">
+                    <strong>The Core Concept:</strong> Both services live in Random Access Memory (RAM), allowing you to build a <strong>Distributed Hash Map</strong>.
+                    <br><br>
+                    <strong>Time Complexity:</strong> Lookups (accessing keys) and setting keys happen in <strong>O(1) time</strong> (constant time), which is incredibly fast and impossible for traditional disk-based databases.
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Memcached -->
+        <section class="topic-card memcached">
+            <h2>2. Memcached: The Bare Minimum</h2>
+            <p>Memcached is an extremely simple, bare-bones distributed string-to-string hashmap. It is basically a limited subset of what Redis can do.</p>
+            
+            <div class="viz-ring-container">
+                <div class="hashing-ring">
+                    <div class="node node-1">N1</div>
+                    <div class="node node-2">N2</div>
+                    <div class="node node-3">N3</div>
+                </div>
+                <div style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #636e72;">Client-Side Consistent Hashing Ring</div>
+                <div class="gutter-node">🛡️ Empty "Gutter" Instance (Fallback)</div>
+            </div>
+
+            <ul>
+                <li><strong>Node Ignorance:</strong> Memcached servers do <em>not</em> know about each other.</li>
+                <li><strong>Client-Side Routing:</strong> Because nodes don't communicate, routing logic lives in the client library. The client uses a <strong>consistent hashing ring</strong> to route requests.</li>
+                <li><strong>LRU Eviction:</strong> If an instance gets full, it uses the Least Recently Used (LRU) algorithm to evict the oldest data.</li>
+                <li><strong>No Built-in Failover:</strong> There is no built-in failure handling or replication.</li>
+            </ul>
+
+            <div class="highlight-box">
+                <strong>Real-World Workaround (Facebook):</strong> Because there is no failover, Facebook uses an empty "Gutter" Memcached instance. If a primary node fails, requests are routed to the Gutter to take its place. Data isn't copied over; the Gutter populates organically over time as new reads/writes occur.
+            </div>
+        </section>
+
+        <!-- SECTION 3: Single Node Redis -->
+        <section class="topic-card redis">
+            <h2>3. (Single Node) Redis: The Multifunctional Upgrade</h2>
+            <p>Redis is essentially a modification of Memcached that adds a massive amount of functionality, turning it from a simple cache into a versatile tool.</p>
+
+            <div class="tag-cloud">
+                <span class="data-tag">Strings</span>
+                <span class="data-tag">Sets</span>
+                <span class="data-tag">Maps</span>
+                <span class="data-tag">Lists</span>
+                <span class="data-tag">Atomic Operations</span>
+                <span class="data-tag">Transactions</span>
+                <span class="data-tag">Range Queries</span>
+            </div>
+
+            <ul>
+                <li><strong>Beyond Strings:</strong> Supports complex data structures and atomic operations (e.g., safely appending to a string).</li>
+                <li><strong>Transactions:</strong> Perform multiple writes serially to a single node as an atomic unit.</li>
+                <li><strong>Hash Tags:</strong> Allows hashing of only <em>part</em> of a key, giving control over partition routing.</li>
+            </ul>
+
+            <h3 style="margin-top: 20px;">Disk Persistence Strategies</h3>
+            <p>Redis can write to disk, making it a viable actual database, not just a volatile cache.</p>
+            <div class="persistence-grid">
+                <div class="persist-card">
+                    <h4>Checkpointing</h4>
+                    <p>Takes intermittent snapshots of memory. <strong>Pros:</strong> Faster. <strong>Cons:</strong> High risk of data loss (losing writes) if a crash happens between snapshots.</p>
+                </div>
+                <div class="persist-card">
+                    <h4>Write-Ahead Log (WAL)</h4>
+                    <p>Every write goes to disk <em>before</em> being written to memory. <strong>Pros:</strong> Prevents data loss. <strong>Cons:</strong> Slower write speeds.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Redis Cluster -->
+        <section class="topic-card redis">
+            <h2>4. Redis Cluster: High Availability</h2>
+            <p>The distributed version of Redis, designed to provide high availability and consistency out-of-the-box without needing external management.</p>
+
+            <div class="cluster-viz">
+                <div class="master-node">👑 Master Leader Node (Handles Writes)</div>
+                <div style="font-size: 1.5rem; color: #b2bec3; margin-bottom: 5px;">⬇️ Asynchronous Replication ⬇️</div>
+                <div class="replicas">
+                    <div class="replica-node">Replica 1</div>
+                    <div class="replica-node">Replica 2</div>
+                </div>
+                
+                <div class="hash-slots"></div>
+                <div class="hash-label">16,384 Fixed Hash Slots distributed across physical nodes</div>
+            </div>
+
+            <ul>
+                <li><strong>Single Leader Replication:</strong> Writes go to the leader, which asynchronously replicates to followers. <em>Warning: If the leader crashes before replication finishes, those writes are permanently lost.</em></li>
+                <li><strong>Gossip Protocol & Failover:</strong> Nodes share "heartbeats" conveying node states and partition mapping. If a leader dies, a <strong>quorum</strong> of master nodes votes on a new leader.</li>
+                <li><strong>Split-Brain Prevention:</strong> Redis uses an "Epoch" number (election version number) to ensure a quorum cannot make conflicting leadership decisions.</li>
+                <li><strong>Partitioning:</strong> Does <em>not</em> use consistent hashing! It uses exactly <strong>16,384 fixed hash slots</strong>. Admins map these slots to nodes to prevent server hotspots. Replicas can handle read requests to reduce master load.</li>
+            </ul>
+        </section>
+
+        <!-- SECTION 5: Architectural Comparison -->
+        <section class="topic-card">
+            <h2>5. When NOT to use Redis Cluster?</h2>
+            <p>If Redis is just Memcached with more features, why would you ever use Memcached? The answer lies in strict architectural requirements. Redis forces you into its predefined paradigms (Single Leader, Gossip).</p>
+
+            <div class="highlight-box" style="border-left-color: #e17055;">
+                <strong>Revert to Memcached and build a custom architecture if you:</strong>
+                <ul style="margin-top: 10px; margin-bottom: 0;">
+                    <li><strong>Need strongly consistent data:</strong> You absolutely cannot tolerate lost writes on a failover event.</li>
+                    <li><strong>Want alternate replication:</strong> You require a Master-Master or Leaderless (DynamoDB style) replication pattern.</li>
+                    <li><strong>Prefer centralized coordination:</strong> You want to use a dedicated coordination service (like ZooKeeper) for configuration and partition management instead of relying on the Gossip protocol.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 6: Conclusion -->
+        <section class="topic-card">
+            <h2>6. Conclusion</h2>
+            <p>Caching greatly reduces database load and latency, though it increases system complexity (especially regarding write consistency). Despite the complexity, it is a must-have in real-world systems.</p>
+
+            <div class="pro-tip">
+                <h3>💡 Pro Tips for System Design</h3>
+                <p><strong>Cost vs. Benefit:</strong> Caching should be used whenever possible until it prices you out (RAM is expensive). If you can afford it, use it.</p>
+                <p style="margin-top: 10px;"><strong>The Facebook Metric:</strong> At Facebook, <strong>99% of read requests are handled by the cache</strong>. This entirely saves their underlying databases from crashing under immense global load.</p>
+                <p style="margin-top: 10px;"><strong>Interview Strategy:</strong> Anyone can say "I will use a cache." To stand out, articulate the subtle trade-offs: Client-side Consistent Hashing (Memcached) vs. 16k Hash Slots (Redis); Single Leader vs. Leaderless; Gossip Protocol vs. ZooKeeper.</p>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Content Delivery Networks</title>
+    <style>
+        :root {
+            --bg-color: #f3f6f9;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --card-bg: #ffffff;
+            --accent-blue: #3182ce;
+            --server-orange: #ed8936;
+            --cdn-black: #1a202c;
+            --user-green: #38a169;
+            --border-light: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--cdn-black);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #a0aec0;
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Feed Layout */
+        .feed-container {
+            max-width: 900px;
+            margin: -30px auto 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .topic-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border-top: 5px solid var(--accent-blue);
+        }
+
+        .topic-card h2 {
+            font-size: 1.8rem;
+            color: var(--accent-blue);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-light);
+            padding-bottom: 10px;
+        }
+
+        .topic-card h3 {
+            font-size: 1.3rem;
+            margin: 25px 0 15px 0;
+            color: var(--text-main);
+        }
+
+        .topic-card p {
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .highlight-box {
+            background: #ebf8ff;
+            border-left: 4px solid var(--accent-blue);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            font-weight: 500;
+        }
+
+        /* CSS Visualizations */
+        .vis-container {
+            background: #f8fafc;
+            border: 1px solid var(--border-light);
+            border-radius: 10px;
+            padding: 30px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .vis-title {
+            width: 100%;
+            text-align: center;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        /* Diagram Elements */
+        .node {
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .node-server { background: var(--server-orange); }
+        .node-cdn { background: var(--cdn-black); }
+        .node-user { background: var(--user-green); }
+        
+        .arrow {
+            font-size: 2rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* HDFS vs Object Store Vis */
+        .tree-vis, .flat-vis {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            width: 45%;
+            min-width: 250px;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #cbd5e0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Push vs Pull Grid */
+        .push-pull-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .flow-col {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Global Map Vis */
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .map-origin {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .map-cdn-node {
+            position: absolute;
+            font-size: 0.8rem;
+            padding: 8px 12px;
+        }
+        
+        .cdn-1 { top: 20%; left: 20%; }
+        .cdn-2 { top: 70%; left: 30%; }
+        .cdn-3 { top: 30%; left: 80%; }
+        .cdn-4 { top: 70%; left: 75%; }
+
+        /* Lines (simulated via rotated divs for global map) */
+        .line {
+            position: absolute;
+            background: rgba(237, 137, 54, 0.4);
+            height: 2px;
+            transform-origin: 0 0;
+            z-index: 5;
+        }
+
+        @media (max-width: 768px) {
+            .push-pull-grid { grid-template-columns: 1fr; }
+            .tree-vis, .flat-vis { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Content Delivery Networks (CDNs)</h1>
+        <p>Complete In-Depth Study Notes & Architecture Breakdown</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- 0. Introduction -->
+        <section class="topic-card">
+            <h2>0. Introduction & Context</h2>
+            <p>Software engineers and internet users consume an estimated 3 to 6 hours of media per day. The underlying technology that has revolutionized the speed at which we can consume this media globally is the Content Delivery Network.</p>
+            <div class="highlight-box">
+                <strong>System Design Importance:</strong> Understanding CDNs is mandatory for any modern system design interview. When dealing with large-scale web application architecture, CDNs are the standard solution to media delivery bottlenecks.
+            </div>
+        </section>
+
+        <!-- 1. Background -->
+        <section class="topic-card">
+            <h2>1. Background: The Problem with Static Content</h2>
+            <p>In large-scale systems, platforms frequently serve <strong>Static Content</strong>. This includes HTML files, images, videos, or any file where the data is written once and is not expected to be modified, appended to, or truncated frequently.</p>
+            
+            <h3>The Core Bottlenecks:</h3>
+            <ul>
+                <li><strong>Massive File Sizes:</strong> Compared to a simple row of text data in a database, media files are gigantic.</li>
+                <li><strong>Server Overload:</strong> Serving these large files directly puts a massive computational and network load on your application servers.</li>
+                <li><strong>Wasted Compute:</strong> Because these files do not change, having an application server continually fetch and recompute them for every single user request is a vast waste of resources.</li>
+                <li><strong>Geographic Latency:</strong> If your server is in California and the user is in India, physical distance significantly degrades load times.</li>
+            </ul>
+            <p><strong>The Solution:</strong> Companies use CDNs to bypass the application server entirely for these specific static files.</p>
+        </section>
+
+        <!-- 2. Storing Static Content -->
+        <section class="topic-card">
+            <h2>2. Storing Static Content: Object Stores vs. HDFS</h2>
+            <p>Before implementing a CDN, we must understand where the original files actually live. <em>Interview Tip: When asked where to store static content, the answer is almost always an Object Store (AWS S3, Azure Blob, GCS).</em></p>
+            
+            <h3>Why Object Stores over HDFS?</h3>
+            <ul>
+                <li><strong>Flat Structure vs. Directory Hierarchy:</strong> HDFS uses a directory tree managed by a centralized "NameNode". Object Stores use a flat structure (Key-Value pairs), avoiding central bottlenecks.</li>
+                <li><strong>Independent Scaling:</strong> With cloud Object Stores, you only pay for what you use. Storage and Compute scale independently. With HDFS, you must provision physical hardware where storage and compute are coupled.</li>
+                <li><strong>Speed via Weaker Guarantees:</strong> Object stores don't support atomic file renaming or locks. Writes are immutable (new writes just increment a version number), which translates to highly parallelized, faster read/write speeds.</li>
+            </ul>
+
+            <div class="vis-container">
+                <div class="vis-title">Visualization: File Architecture</div>
+                
+                <div class="tree-vis">
+                    <h4>HDFS (Tree/Hierarchy)</h4>
+                    <div class="code-block">
+                        NameNode<br>
+                        ├── /UserMedia/<br>
+                        │   ├── /Images/<br>
+                        │   │   └── photo.jpg<br>
+                        │   └── /Videos/<br>
+                        │       └── vid.mp4<br>
+                    </div>
+                </div>
+
+                <div class="flat-vis">
+                    <h4>Object Store (Flat Key-Value)</h4>
+                    <div class="code-block">
+                        {<br>
+                        &nbsp;&nbsp;"key_1": "photo.jpg_v1",<br>
+                        &nbsp;&nbsp;"key_2": "vid.mp4_v1",<br>
+                        &nbsp;&nbsp;"key_3": "index.html_v2"<br>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <h3>Downsides to Object Stores</h3>
+            <ul>
+                <li><strong>No Multi-Object Transactions:</strong> You cannot execute complex transactions across multiple files easily without a complex coordination service (like a 2-Phase Commit).</li>
+                <li><strong>Terrible for Batch Jobs / Analytics:</strong> HDFS thrives on <em>Data Locality</em> (running compute on the same machine holding the data). Object stores are remote; running analytics requires transferring massive amounts of data over the network to a compute cluster first, which is incredibly slow.</li>
+            </ul>
+        </section>
+
+        <!-- 3. Geographic Latency -->
+        <section class="topic-card">
+            <h2>3. Object Stores Aren't Good Enough</h2>
+            <p>Even though Object Stores like S3 are fast and scalable for holding the original files, they do not solve the geographic distance problem.</p>
+            <p><strong>The Bottleneck:</strong> If a user in Asia requests a large 4K video file stored in an S3 bucket in California, making a network call across the globe for every single byte request is highly inefficient and creates unacceptable lag and buffering.</p>
+            
+            <div class="vis-container">
+                <div class="vis-title">The Latency Problem</div>
+                <div class="node node-user">User (India)</div>
+                <div class="arrow">〰️〰️ (High Latency Network Call) 〰️〰️</div>
+                <div class="node node-server">AWS S3 (California)</div>
+            </div>
+        </section>
+
+        <!-- 4. Enter CDNs -->
+        <section class="topic-card">
+            <h2>4. Enter Content Delivery Networks (CDNs)</h2>
+            <p><strong>Definition:</strong> A CDN is a special type of geographically distributed cache used exclusively to store static content closer to the end-users. Unlike a standard database cache located inside your main data center, CDNs live on the "Edge" (physically close to user populations).</p>
+
+            <h3>The Two CDN Operating Models</h3>
+            
+            <div class="vis-container push-pull-grid">
+                <!-- Push Model -->
+                <div class="flow-col">
+                    <h4>1. Push CDNs</h4>
+                    <p style="font-size: 0.9rem; text-align: center; color: var(--text-muted);">Best for predictable content (e.g., NYT Front Page).</p>
+                    <div class="node node-server">Origin Server</div>
+                    <div class="arrow">↓ (Cron Job Pushes Data)</div>
+                    <div class="node node-cdn">Edge CDN</div>
+                    <div class="arrow">↓ (Instant Serve)</div>
+                    <div class="node node-user">User</div>
+                </div>
+
+                <!-- Pull Model -->
+                <div class="flow-col">
+                    <h4>2. Pull CDNs</h4>
+                    <p style="font-size: 0.9rem; text-align: center; color: var(--text-muted);">Best for viral/unpredictable content (e.g., TikToks).</p>
+                    <div class="node node-user">User Requests File</div>
+                    <div class="arrow">↓</div>
+                    <div class="node node-cdn">CDN (Cache Miss)</div>
+                    <div class="arrow">↓ (Fetches & Saves locally)</div>
+                    <div class="node node-server">Origin Server</div>
+                </div>
+            </div>
+            
+            <p><strong>Data Partitioning:</strong> You can partition data geographically. For example, American news data is routed specifically to North American CDNs, while Asian news is routed to Asian CDNs.</p>
+        </section>
+
+        <!-- 5. CDNs Visualized -->
+        <section class="topic-card">
+            <h2>5. Global Network Architecture</h2>
+            <p>CDNs act as the middleman between the global user base and your centralized origin server. Users are automatically routed to the CDN edge node geographically closest to them.</p>
+
+            <div class="vis-container">
+                <div class="vis-title">Global Map Visualization</div>
+                <div class="map-wrapper">
+                    <!-- Origin -->
+                    <div class="node node-server map-origin">Origin DB (US)</div>
+                    <!-- Edge Nodes -->
+                    <div class="node node-cdn map-cdn-node cdn-1">Edge (EU)</div>
+                    <div class="node node-cdn map-cdn-node cdn-2">Edge (SA)</div>
+                    <div class="node node-cdn map-cdn-node cdn-3">Edge (Asia)</div>
+                    <div class="node node-cdn map-cdn-node cdn-4">Edge (AUS)</div>
+                    
+                    <!-- Decorative CSS lines representing network -->
+                    <svg width="100%" height="100%" style="position:absolute; top:0; left:0; z-index: 1;">
+                        <line x1="50%" y1="50%" x2="20%" y2="20%" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="50%" y1="50%" x2="30%" y2="70%" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="50%" y1="50%" x2="80%" y2="30%" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="5,5"/>
+                        <line x1="50%" y1="50%" x2="75%" y2="70%" stroke="#cbd5e0" stroke-width="2" stroke-dasharray="5,5"/>
+                    </svg>
+                </div>
+            </div>
+            <p><em>Handling Stale Data:</em> If the origin server updates a file, the CDN might still hold the old version. This is managed via Expiration Times (TTL - Time to Live) or by manually purging the CDN data.</p>
+        </section>
+
+        <!-- 6. Pros and Cons -->
+        <section class="topic-card">
+            <h2>6. CDNs Analyzed: Trade-offs</h2>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+                <div style="flex: 1; min-width: 250px;">
+                    <h3 style="color: var(--user-green); margin-top: 0;">Pros (+)</h3>
+                    <ul>
+                        <li><strong>Reduces Origin Load:</strong> Protects application servers from crashing under the weight of popular media requests.</li>
+                        <li><strong>Increases Speed:</strong> Geographic proximity drastically lowers latency for end-users.</li>
+                        <li><strong>Security & Reverse Proxy:</strong> CDNs act as a wall of defense between the client and your server, absorbing and protecting against malicious traffic like DDoS attacks.</li>
+                    </ul>
+                </div>
+                
+                <div style="flex: 1; min-width: 250px;">
+                    <h3 style="color: #e53e3e; margin-top: 0;">Cons (-)</h3>
+                    <ul>
+                        <li><strong>Stale Data:</strong> Users might occasionally see outdated content (mitigated by TTL/expiration strategies).</li>
+                        <li><strong>Cache Miss Penalty:</strong> If a file isn't in the CDN, the request takes longer because it has to travel: User &rarr; CDN &rarr; Origin &rarr; CDN &rarr; User.</li>
+                        <li><strong>Database Overhead:</strong> Your database must be updated to store the static URL pointing directly to the CDN instead of the local server path.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Conclusion & References -->
+        <section class="topic-card">
+            <h2>7. Conclusion</h2>
+            <p>Adding a Content Delivery Network in conjunction with an object file storage system (like AWS S3) is a virtually guaranteed necessity for any large-scale consumer platform. It takes the heavy lifting off your compute servers and ensures lightning-fast media rendering for a globally distributed user base.</p>
+            
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid var(--border-light);">
+            
+            <h3>8. References & Further Reading</h3>
+            <ul style="list-style-type: none; margin-left: 0;">
+                <li>🔗 <a href="https://databricks.com/blog/2017/05/31/top-5-reasons-for-choosing-s3-over-hdfs.html" style="color: var(--accent-blue);">Top 5 Reasons for Choosing S3 Over HDFS (Databricks)</a></li>
+                <li>📺 <a href="https://www.youtube.com/watch?v=farO15_0NUQ" style="color: var(--accent-blue);">System Design Supplement 1</a></li>
+                <li>📺 <a href="https://www.youtube.com/watch?v=8zX0rue2Hic" style="color: var(--accent-blue);">System Design Supplement 2</a></li>
+            </ul>
+        </section>
+
+    </main>
+
+</body>
+</html>

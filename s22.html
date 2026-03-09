@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HBase Study Notes | Vertical Feed</title>
+    <style>
+        :root {
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --secondary: #4f46e5;
+            --text-main: #1f2937;
+            --text-muted: #4b5563;
+            --accent-slide: #f8fafc;
+            --accent-audio: #eff6ff;
+            --warning: #ef4444;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Header / Title */
+        .feed-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .feed-header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .feed-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Feed Card */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1.25rem 1.5rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* Visualizations Area */
+        .visualization-box {
+            background-color: #1e293b;
+            color: white;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Notes Layout */
+        .notes-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .note-section {
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid;
+        }
+
+        .slide-text {
+            background-color: var(--accent-slide);
+            border-left-color: #94a3b8;
+        }
+
+        .instructor-audio {
+            background-color: var(--accent-audio);
+            border-left-color: var(--primary);
+        }
+
+        .note-section h3 {
+            margin-bottom: 0.75rem;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .note-section ul {
+            margin-left: 1.5rem;
+        }
+
+        .note-section li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            background-color: #fef08a;
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+            color: #854d0e;
+            font-weight: 600;
+        }
+
+        .warning-text {
+            color: var(--warning);
+            font-weight: bold;
+        }
+
+        /* --- Specific Visualization CSS --- */
+        /* Table Visual */
+        .visual-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            color: black;
+            text-align: left;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .visual-table th, .visual-table td {
+            border: 1px solid #cbd5e1;
+            padding: 0.75rem;
+        }
+        .visual-table th { background-color: #f1f5f9; }
+        .cf-header { border: 3px solid #ef4444 !important; text-align: center;}
+
+        /* Flow Diagram Visual */
+        .diagram-row {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+            justify-content: center;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .diagram-box {
+            background: white;
+            color: #1e293b;
+            padding: 1rem;
+            border-radius: 6px;
+            font-weight: bold;
+            min-width: 120px;
+            border: 2px solid #cbd5e1;
+        }
+        .diagram-arrow {
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+        }
+        .diagram-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: rgba(255,255,255,0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="feed-container">
+    
+    <div class="feed-header">
+        <h1>HBase Complete Study Guide</h1>
+        <p>Continuous Scroll Notes • Visualizations • Instructor Deep Dives</p>
+    </div>
+
+    <!-- Intro Card -->
+    <article class="card">
+        <div class="card-title">1. Introduction & Context</div>
+        <div class="notes-content">
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Audio Intro</h3>
+                <ul>
+                    <li><strong>Video Motivation:</strong> Much of the information online about HBase is plagiarized or lacks depth. This guide provides clear, accurate architectural depth.</li>
+                    <li><strong>Historical Context:</strong> HBase is heavily modeled after Google's <span class="highlight">Bigtable</span> (which runs on the Google File System). HBase essentially copies this architecture but builds it on top of Hadoop's <span class="highlight">HDFS</span>.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Background Card -->
+    <article class="card">
+        <div class="card-title">2. Background & The HDFS Problem</div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>HBase is a wide-column storage database designed for transactions or analytics, built on HDFS.</li>
+                    <li>HDFS provides high latency writes/reads (direct from disk) and only allows sequential writes.</li>
+                    <li>HBase uses an <strong>LSM Tree</strong> architecture to mitigate this, providing low-latency writes/reads for random accesses.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>The Problem with HDFS:</strong> HDFS is designed for massive files and batch processing. It writes sequentially to disk, making random reads and writes very slow.</li>
+                    <li><strong>The HBase Solution:</strong> To fix this, HBase sits on top of HDFS and uses an <strong>LSM (Log-Structured Merge) Tree</strong> and <strong>SSTables</strong>. It absorbs random read/write requests, organizes them in memory, and then writes them sequentially to disk, resulting in high-performance operations.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Data Model Card -->
+    <article class="card">
+        <div class="card-title">3. The Data Model (Wide Column)</div>
+        <div class="visualization-box">
+            <p style="margin-bottom: 1rem; font-weight: bold; color: #93c5fd;">Visual Breakdown: HBase Table Structure</p>
+            <table class="visual-table">
+                <tr>
+                    <th rowspan="2" style="background-color: #e2e8f0;">Row Key<br><small>(Customer ID)</small></th>
+                    <th colspan="2" class="cf-header">Customer (Column Family)</th>
+                    <th colspan="2" class="cf-header">Sales (Column Family)</th>
+                </tr>
+                <tr>
+                    <th>Name</th>
+                    <th>City</th>
+                    <th>Product</th>
+                    <th>Amount</th>
+                </tr>
+                <tr>
+                    <td><strong>101</strong></td>
+                    <td>Ram</td>
+                    <td>Delhi</td>
+                    <td>Chairs</td>
+                    <td>4000.00</td>
+                </tr>
+                <tr>
+                    <td><strong>102</strong></td>
+                    <td>Shyam</td>
+                    <td>Lucknow</td>
+                    <td>Lamps</td>
+                    <td>2000.00</td>
+                </tr>
+            </table>
+        </div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>Each row has a single row key.</li>
+                    <li>Columns are grouped into "Column Families" (consisting of multiple values).</li>
+                    <li>The row key can be comprised of multiple parts, allowing the sorting of rows within a table.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>Comparison to Cassandra:</strong> Looks similar but functions differently. Cassandra has specific clustering keys for internal sorting.</li>
+                    <li><strong>Row Keys in HBase:</strong> Row keys are just single strings. To achieve sorting, you format the row key into multiple parts separated by a delimiter (e.g., <code>PartA:PartB:PartC</code>).</li>
+                    <li><span class="warning-text">Design Warning:</span> You must be very clever when designing your row keys to ensure the data sorts exactly the way you need it to upon retrieval.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Architecture Card -->
+    <article class="card">
+        <div class="card-title">4. Architectural Overview</div>
+        <div class="visualization-box">
+            <div class="diagram-row">
+                <div class="diagram-box" style="border-color: #ef4444;">Client</div>
+            </div>
+            <div class="diagram-arrow">⬇</div>
+            <div class="diagram-row">
+                <div class="diagram-box" style="border-color: #f59e0b;">HMaster (Metadata)</div>
+                <div class="diagram-box" style="border-color: #22c55e;">ZooKeeper (Coordination)</div>
+            </div>
+            <div class="diagram-arrow">⬇</div>
+            <div class="diagram-row">
+                <div class="diagram-box" style="border-color: #3b82f6;">Region Server 1</div>
+                <div class="diagram-box" style="border-color: #3b82f6;">Region Server 2</div>
+                <div class="diagram-box" style="border-color: #3b82f6;">Region Server 3</div>
+            </div>
+            <div class="diagram-arrow">⬇</div>
+            <div class="diagram-row">
+                <div class="diagram-box" style="width: 100%; border-color: #64748b;">HDFS (Storage layer)</div>
+            </div>
+        </div>
+        <div class="notes-content">
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li>This architecture is nearly identical to Google's Bigtable.</li>
+                    <li><strong>HMaster:</strong> The central coordinator that tells clients where to go.</li>
+                    <li><strong>Region Servers:</strong> The workhorses handling the actual data reads and writes.</li>
+                    <li><strong>ZooKeeper:</strong> Used for coordination, keeping track of server health, and managing backups.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Master Server Card -->
+    <article class="card">
+        <div class="card-title">5. Master Server (HMaster)</div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>Stores all file metadata and locations of chunks of files (similar to HDFS NameNode).</li>
+                    <li>Uses <strong>Range-based partitioning</strong> that splits based on row key if it gets too big.</li>
+                    <li>Clients reach out to the master server first to figure out file locations.</li>
+                    <li>Used with ZooKeeper to replicate its Write-Ahead Log (WAL) to support a backup master node.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><span class="warning-text">The Hotspotting Problem:</span> Because HBase uses <em>range-based</em> partitioning, it is <strong>bad for time-series data</strong>. If your row key is a timestamp, every single new write goes to the exact same partition (the current time). This overloads one server while the rest sit idle.</li>
+                    <li><strong>Solution to Hotspotting:</strong> You must hash the key or alter it so writes are distributed evenly.</li>
+                    <li><strong>Fault Tolerance:</strong> The master server pushes its logs to ZooKeeper. If the primary master dies, a backup master reads the logs from ZooKeeper and takes over seamlessly.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Region Server Card -->
+    <article class="card">
+        <div class="card-title">6. Region Server (The Workhorse)</div>
+        <div class="visualization-box">
+            <p style="margin-bottom: 1rem; font-weight: bold; color: #93c5fd;">The Write/Read Path</p>
+            <div class="diagram-row" style="align-items: center;">
+                <div class="diagram-group">
+                    <span style="color: #6ee7b7;">1. Fast Write</span>
+                    <div class="diagram-box">In-Memory LSM Tree<br>(MemStore)</div>
+                </div>
+                <div class="diagram-arrow">➡ <br> <small style="font-size: 0.8rem; color: #cbd5e1;">Flushes when full</small> ➡</div>
+                <div class="diagram-group">
+                    <span style="color: #93c5fd;">2. Sequential Disk Write</span>
+                    <div class="diagram-box">Sorted HFiles<br>(SSTables)</div>
+                </div>
+            </div>
+        </div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>Runs as a separate thread on HDFS datanode servers.</li>
+                    <li>Sends heartbeats to ZooKeeper so master knows they are alive.</li>
+                    <li>Uses an LSM tree style in-memory data structure. Writes are sent here first (plus a Write-Ahead Log for safety).</li>
+                    <li>Once MemStore is large, writes flush to sorted <strong>HFiles</strong> (SSTables) in a column-oriented format.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>Crucial Misconception Cleared:</strong> A Region Server is usually <em>not</em> a standalone machine! It is a software program running on the <em>same physical computer</em> as the HDFS DataNode program.</li>
+                    <li><strong>Read Process:</strong> Reads check the memory (MemStore) first. If data isn't there, it checks the HFiles on disk. HBase uses optimizations like Bloom Filters to speed this up.</li>
+                    <li><strong>Column-Oriented Advantage:</strong> Storing data by columns means if you run analytics on just one specific column, the system pulls only that data without reading irrelevant info, massively increasing throughput.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Replication Card -->
+    <article class="card">
+        <div class="card-title">7. Replication</div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>Since the region node is running on an HDFS replication node, it uses the HDFS replication pipeline to synchronously replicate the HFile to other nodes.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>Strong Consistency:</strong> Because it relies on HDFS, writes must succeed across the HDFS replication pipeline before being marked successful.</li>
+                    <li><strong>Handling Failures:</strong> While one Region Server handles reads/writes for a specific chunk of data, the underlying <em>data files</em> are backed up across multiple HDFS nodes. If the Region Server crashes, another server can take over because the data is safe in HDFS.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Analytics Card -->
+    <article class="card">
+        <div class="card-title">8. Analytics Perspective</div>
+        <div class="notes-content">
+            <div class="note-section slide-text">
+                <h3>🖥️ Slide Content</h3>
+                <ul>
+                    <li>Column-oriented storage makes for very high read throughput of one column.</li>
+                    <li>Being built on HDFS allows good integration with MapReduce and dataflow engines (Spark, Tez).</li>
+                    <li><span class="warning-text">Joins are not supported in HBase!</span> Use batch processes to perform joins.</li>
+                </ul>
+            </div>
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>The Hadoop Ecosystem:</strong> The biggest advantage of HBase is that your data is sitting exactly where tools like Spark and MapReduce expect it to be (inside HDFS).</li>
+                    <li><strong>No SQL Joins:</strong> Because it is NoSQL and unstructured, you cannot just write a SQL <code>JOIN</code> command. You have to write complex batch processing jobs (using multiple mappers and reducers) to manually combine the data associations.</li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+    <!-- Conclusion Card -->
+    <article class="card">
+        <div class="card-title">9. Conclusion: HBase vs. Cassandra</div>
+        <div class="visualization-box" style="flex-direction: row; gap: 2rem; align-items: stretch;">
+            <div style="background: white; color: black; padding: 1.5rem; border-radius: 8px; flex: 1;">
+                <h3 style="color: #ef4444; margin-bottom: 0.5rem;">Cassandra</h3>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Leaderless (Dynamo style)</li>
+                    <li>Real-time transactions</li>
+                    <li>Super fast writes</li>
+                    <li>User-facing apps</li>
+                </ul>
+            </div>
+            <div style="background: white; color: black; padding: 1.5rem; border-radius: 8px; flex: 1;">
+                <h3 style="color: #2563eb; margin-bottom: 0.5rem;">HBase</h3>
+                <ul style="margin-left: 1.5rem;">
+                    <li>Master-oriented</li>
+                    <li>Great as a <strong>Data Lake</strong></li>
+                    <li>Batch/streaming processes</li>
+                    <li>Fast reads/writes via LSM</li>
+                </ul>
+            </div>
+        </div>
+        <div class="notes-content">
+            <div class="note-section instructor-audio">
+                <h3>🎙️ Instructor's Deep Dive</h3>
+                <ul>
+                    <li><strong>Cassandra:</strong> Built for user-facing applications where you need instant writes and eventual consistency without a single point of failure.</li>
+                    <li><strong>HBase:</strong> Won't write quite as fast as Cassandra, but it shines as a <span class="highlight">Data Lake</span>. A Data Lake is a place to dump massive amounts of unstructured/semi-structured data to eventually run heavy analytics on later.</li>
+                    <li><strong>Data Lake vs. Data Warehouse:</strong> 
+                        <ul>
+                            <li><em>HBase (Data Lake):</em> Unstructured, No SQL, great for dumping massive data.</li>
+                            <li><em>Data Warehouse:</em> Star/Snowflake schemas, highly structured Fact and Dimension tables, meant for complex SQL querying. (If you need advanced queries, don't use HBase, opt for a SQL Data Warehouse).</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </article>
+
+</div>
+
+</body>
+</html>

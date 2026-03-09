@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Phase Commit (2PC) | Study Feed</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #f4f6f8;
+            --text-main: #1f2937;
+            --text-muted: #4b5563;
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --success: #10b981;
+            --danger: #ef4444;
+            --danger-light: #fee2e2;
+            --card-bg: #ffffff;
+            --border: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Feed Container */
+        .feed-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border);
+            animation: fadeIn 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        /* Header */
+        .header-card {
+            background: linear-gradient(135deg, var(--primary), #1e40af);
+            color: white;
+            text-align: center;
+            padding: 50px 30px;
+        }
+
+        .header-card h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        .header-card p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.75rem;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 10px;
+            display: inline-block;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin: 20px 0 10px 0;
+            color: var(--primary);
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--text-main);
+        }
+
+        /* Callout Boxes */
+        .callout {
+            background-color: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 20px 0;
+        }
+
+        .callout-danger {
+            background-color: var(--danger-light);
+            border-left: 4px solid var(--danger);
+        }
+
+        .callout p {
+            margin: 0;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background-color: #111827; /* Dark mode for diagrams like the video */
+            border-radius: 12px;
+            padding: 40px 20px;
+            margin: 25px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            font-family: monospace;
+            overflow: hidden;
+        }
+
+        .viz-row {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .node-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .node-label {
+            background: rgba(255,255,255,0.1);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* CSS Arrows */
+        .arrow-down-left, .arrow-down-right, .arrow-up-left, .arrow-up-right {
+            position: absolute;
+            width: 2px;
+            background-color: white;
+            top: 60px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .arrow-down-left::after, .arrow-down-right::after {
+            content: '▼';
+            position: absolute;
+            bottom: -10px;
+            color: white;
+        }
+
+        .arrow-up-left::after, .arrow-up-right::after {
+            content: '▲';
+            position: absolute;
+            top: -10px;
+            color: white;
+        }
+
+        .arrow-down-left { left: 40%; transform: rotate(30deg); }
+        .arrow-down-right { right: 40%; transform: rotate(-30deg); }
+        
+        .arrow-up-left { left: 45%; transform: rotate(30deg); background-color: var(--success);}
+        .arrow-up-left::after { color: var(--success); }
+        
+        .arrow-up-right { right: 45%; transform: rotate(-30deg); background-color: var(--success);}
+        .arrow-up-right::after { color: var(--success); }
+
+        .arrow-label {
+            background: #111827;
+            padding: 2px 5px;
+            border-radius: 4px;
+            transform: rotate(-30deg); /* Adjust based on arrow */
+        }
+        .arrow-down-right .arrow-label { transform: rotate(30deg); }
+
+        /* Animation class to trigger on scroll */
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Staggered load for initial cards */
+        .card:nth-child(1) { animation-delay: 0.1s; }
+        .card:nth-child(2) { animation-delay: 0.2s; }
+        .card:nth-child(3) { animation-delay: 0.3s; }
+
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <!-- Header -->
+        <article class="card header-card">
+            <h1>Two-Phase Commit (2PC)</h1>
+            <p>Complete Study Notes & Visualizations from the Distributed Systems Lecture</p>
+        </article>
+
+        <!-- Topic 1 -->
+        <article class="card">
+            <h2>1. Introduction & Core Concepts</h2>
+            <p>Welcome to the study feed for Consensus Algorithms in Distributed Systems. In this lesson, we explore <strong>Two-Phase Commit (2PC)</strong>, a simple consensus algorithm used to solve the problem of atomic commits.</p>
+            
+            <h3>Definitions to Know:</h3>
+            <ul>
+                <li><strong>Atomic Commit:</strong> In a distributed transaction touching multiple partitions (nodes), every single write must either <strong>succeed completely</strong> or <strong>fail completely (roll back)</strong>. There is no middle ground.</li>
+                <li><strong>The Challenge:</strong> Achieving atomicity on a single machine is easy. But when a transaction spans multiple nodes over a network (where power can fail or connections drop), all nodes must agree on the outcome. This requires <em>consensus</em>.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="card">
+            <h2>2. Why Do We Need Atomic Commit?</h2>
+            <p>Atomic commits prevent databases from getting out of sync due to partially completed transactions.</p>
+            <ul>
+                <li><strong>Cross-Partition Transactions:</strong> e.g., On LinkedIn, writing a job listing that spans multiple partitions. All must update simultaneously.</li>
+                <li><strong>Global Secondary Indexes:</strong> Every time you write to a primary partition, the secondary index (living on another node) must also be kept in sync.</li>
+                <li><strong>Derived Data Consistency:</strong> Keeping primary databases synced with data warehouses or caches.</li>
+            </ul>
+            
+            <div class="callout">
+                <p>💡 <strong>Instructor's Real-World Example:</strong></p>
+                <p style="margin-top: 10px;">Imagine sending an email notification every time a database write is successful. If the write fails but an email is still sent, and then the system auto-retries the write and sends <em>another</em> email, the user gets duplicate emails. Atomic commit ensures the email only triggers if the write is 100% committed everywhere.</p>
+            </div>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="card">
+            <h2>3. How Two-Phase Commit Works</h2>
+            <p>The architecture consists of a <strong>Coordinator Node</strong> (acts as the single leader/manager) and two or more <strong>Database Partitions</strong> (participant nodes).</p>
+
+            <h3>Phase 1: The Prepare Phase</h3>
+            <p>The Coordinator sends a <strong>"Prepare"</strong> request to all nodes. The partitions process the request and respond.</p>
+            
+            <!-- Visualization: Phase 1 -->
+            <div class="viz-container">
+                <div class="viz-row">
+                    <div class="node">
+                        <span class="node-icon">🖥️</span>
+                        <span class="node-label">Coordinator</span>
+                    </div>
+                </div>
+                <div class="viz-row" style="height: 120px;">
+                    <!-- Prepare Arrows -->
+                    <div class="arrow-down-left">
+                        <span class="arrow-label">prepare</span>
+                    </div>
+                    <div class="arrow-down-right">
+                        <span class="arrow-label">prepare</span>
+                    </div>
+                    <!-- OK Arrows (Upwards) -->
+                    <div class="arrow-up-left">
+                        <span class="arrow-label" style="color:var(--success)">ok</span>
+                    </div>
+                    <div class="arrow-up-right">
+                        <span class="arrow-label" style="color:var(--success)">ok</span>
+                    </div>
+                </div>
+                <div class="viz-row">
+                    <div class="node">
+                        <span class="node-icon">🗄️</span>
+                        <span class="node-label">Partition 1</span>
+                    </div>
+                    <div class="node">
+                        <span class="node-icon">🗄️</span>
+                        <span class="node-label">Partition 2</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout">
+                <p>🤝 <strong>The "OK" Promise:</strong></p>
+                <p style="margin-top: 10px;">When a node replies with "OK", it means: <em>"I am prepared to do this. No matter what happens—disk failure, network loss—I guarantee I will commit this transaction as soon as you tell me to."</em></p>
+            </div>
+
+            <h3>Phase 2: The Commit/Abort Phase</h3>
+            <p>The Coordinator tallies the responses from Phase 1:</p>
+            <ul>
+                <li><strong>Success:</strong> If <strong>ALL</strong> partitions respond with "OK", the Coordinator sends a <code>result=commit</code> request to all nodes.</li>
+                <li><strong>Failure:</strong> If even <strong>ONE</strong> partition fails to respond or responds with an error, the Coordinator sends a <code>result=abort</code> request, and everything rolls back.</li>
+            </ul>
+
+            <!-- Visualization: Phase 2 -->
+            <div class="viz-container">
+                <div class="viz-row">
+                    <div class="node">
+                        <span class="node-icon">🖥️</span>
+                        <span class="node-label">Coordinator</span>
+                    </div>
+                </div>
+                <div class="viz-row" style="height: 120px;">
+                    <!-- Commit Arrows -->
+                    <div class="arrow-down-left" style="background-color: var(--success);">
+                        <span class="arrow-label" style="color: var(--success); font-weight: bold;">result=commit</span>
+                    </div>
+                    <div class="arrow-down-right" style="background-color: var(--success);">
+                        <span class="arrow-label" style="color: var(--success); font-weight: bold;">result=commit</span>
+                    </div>
+                </div>
+                <div class="viz-row">
+                    <div class="node">
+                        <span class="node-icon">🗄️</span>
+                        <span class="node-label">Partition 1</span>
+                    </div>
+                    <div class="node">
+                        <span class="node-icon">🗄️</span>
+                        <span class="node-label">Partition 2</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="card">
+            <h2>4. Under the Hood: Why It Works</h2>
+            <p>How does the system keep track of all this without making mistakes?</p>
+            <ul>
+                <li><strong>Unique Transaction IDs:</strong> The Coordinator assigns a monotonically increasing, unique ID to each transaction so nothing gets mixed up.</li>
+                <li><strong>Local ACID Properties:</strong> Each participant node executes its portion of the transaction locally, giving it local atomicity and serializability.</li>
+                <li><strong>The Commit Point:</strong> The exact moment a node replies "OK" during Phase 1. It is legally bound by the algorithm to hold that transaction ready.</li>
+                <li><strong>Coordinator Write-Ahead Log:</strong> Before sending the final Commit/Abort, the Coordinator writes its decision to an internal log. If the Coordinator crashes right after deciding, it can read its log upon reboot and finish sending the commands.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="card">
+            <h2>5. The Fatal Flaws of 2PC</h2>
+            <div class="callout callout-danger">
+                <p>🚨 <strong>High-Yield Concept:</strong> Two-Phase Commit is NOT fault-tolerant!</p>
+            </div>
+            
+            <h3>Flaw 1: Partition Failure</h3>
+            <p>If a participant partition fails <em>after</em> the prepare phase (after it said "OK"), the Coordinator must try to reach it <strong>forever</strong> until it comes back online.</p>
+
+            <h3>Flaw 2: Coordinator Failure (Single Point of Failure)</h3>
+            <p>If the single Coordinator node crashes <em>after</em> nodes replied "OK", but <em>before</em> sending the final Commit/Abort command, the entire system breaks down.</p>
+            <ul>
+                <li><strong>"In Doubt" Nodes:</strong> Partitions are stuck. They promised to hold the transaction, but don't know the final verdict. They cannot talk to each other to figure it out.</li>
+                <li><strong>System Freezes:</strong> Because nodes are "in doubt," they hold <strong>exclusive locks</strong> on the relevant rows (via Two-Phase Locking). Other transactions cannot read or write to those rows. The database effectively halts.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="card">
+            <h2>6. Heterogeneous vs. Database Internal 2PC</h2>
+            <p>The instructor clarifies how 2PC is actually implemented in practice:</p>
+            
+            <h3>Heterogeneous Transactions (The XA API)</h3>
+            <p>This is 2PC running across completely different types of software (e.g., a MySQL DB and an Apache Kafka queue). It uses a universal API called <strong>XA</strong>. Because the systems are so different, there is no shared protocol for optimizations. It is inherently slow and blocking.</p>
+
+            <h3>Database Internal Transactions</h3>
+            <p>This is 2PC running within the <em>same</em> software ecosystem (e.g., a distributed PostgreSQL cluster). Because the nodes run the same code, they can share lock info, detect deadlocks, and use optimistic concurrency controls (like Serializable Snapshot Isolation), making it much more efficient and less blocking.</p>
+        </article>
+
+        <!-- Topic 7 -->
+        <article class="card">
+            <h2>7. Summary & What's Next</h2>
+            <p><strong>To summarize:</strong> 2PC uses a single Coordinator to ask all nodes if they can commit. If yes, everyone commits. If no, everyone aborts. While it guarantees consistency, it sacrifices availability and lacks fault tolerance.</p>
+            
+            <p><strong>Foreshadowing:</strong> Because 2PC freezes if the Coordinator crashes, modern distributed systems use superior consensus algorithms like <strong>Paxos, Raft, or ZAB</strong>.</p>
+            
+            <div class="callout">
+                <p>⏩ <strong>Why are Raft/Paxos better?</strong></p>
+                <p style="margin-top: 10px;">Unlike 2PC which requires 100% agreement, these algorithms use <strong>Quorums (a majority vote)</strong>. If a minority of nodes crash, the system continues to function perfectly, providing true fault tolerance.</p>
+            </div>
+        </article>
+
+    </main>
+
+    <script>
+        // Simple Intersection Observer to fade in cards as user scrolls down the feed
+        document.addEventListener("DOMContentLoaded", () => {
+            const cards = document.querySelectorAll('.card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationPlayState = 'running';
+                        // Keep opacity at 1 once loaded
+                        entry.target.style.opacity = '1';
+                    }
+                });
+            }, {
+                threshold: 0.1,
+                rootMargin: "0px 0px -50px 0px"
+            });
+
+            cards.forEach(card => {
+                // Pause animation initially
+                card.style.animationPlayState = 'paused';
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

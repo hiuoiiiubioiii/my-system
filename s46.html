@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Certificate Transparency</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2a2a2a;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent-blue: #4da6ff;
+            --accent-green: #4CAF50;
+            --accent-red: #F44336;
+            --accent-orange: #ff9800;
+            --border-radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            width: 100%;
+            max-width: 850px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #333;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            border: 1px solid #333;
+        }
+
+        .card h2 {
+            font-size: 1.8rem;
+            color: white;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 15px;
+        }
+
+        .slide-text {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border: 1px dashed #555;
+        }
+
+        .slide-text h4 {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .instructor-notes {
+            background-color: #1e3a5f;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .instructor-notes h4 {
+            color: #82caff;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background-color: #151515;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border: 1px solid #333;
+        }
+
+        /* MITM Viz */
+        .mitm-flow {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            justify-content: space-between;
+        }
+        .node {
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            flex: 1;
+        }
+        .user-node { background-color: rgba(76, 175, 80, 0.2); border: 2px solid var(--accent-green); color: var(--accent-green); }
+        .hacker-node { background-color: rgba(244, 67, 54, 0.2); border: 2px dashed var(--accent-red); color: var(--accent-red); }
+        .server-node { background-color: rgba(77, 166, 255, 0.2); border: 2px solid var(--accent-blue); color: var(--accent-blue); }
+        .arrow { color: var(--text-muted); font-size: 1.5rem; font-weight: bold; }
+
+        /* Keys Viz */
+        .key-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        .pub-key { background-color: rgba(76, 175, 80, 0.2); border: 1px solid var(--accent-green); color: var(--accent-green); }
+        .priv-key { background-color: rgba(244, 67, 54, 0.2); border: 1px solid var(--accent-red); color: var(--accent-red); }
+
+        /* Merkle Tree Viz */
+        .tree {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .tree-row {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+        }
+        .tree-node {
+            background-color: #444;
+            padding: 10px 20px;
+            border-radius: 4px;
+            border: 1px solid #666;
+            font-family: monospace;
+            font-size: 1.1rem;
+            position: relative;
+        }
+        .target-node { border: 2px solid var(--accent-blue); background-color: rgba(77, 166, 255, 0.2); }
+        .proof-node { border: 2px solid var(--accent-orange); background-color: rgba(255, 152, 0, 0.2); }
+        
+        /* Math block */
+        .math-block {
+            background-color: #000;
+            color: #00ff00;
+            font-family: monospace;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .highlight { color: var(--accent-orange); font-weight: bold; }
+        .highlight-blue { color: var(--accent-blue); font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <header>
+            <h1>Certificate Transparency</h1>
+            <p>Comprehensive Study Guide & Visual Notes</p>
+        </header>
+
+        <!-- Section 1 -->
+        <section class="card">
+            <h2>1. Background & The Need for HTTPS</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p>In previous lessons, we mentioned network protocols (TCP/UDP) used to send byte streams reliably. However, how do we ensure the byte streams are going to the right place and are secure?</p>
+                <p><strong>Certificate transparency is used in HTTPS</strong>, which takes traditional HTTP requests and adds an additional security layer (known as SSL/TLS).</p>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>TCP and UDP are great for ensuring data gets from point A to point B, but they don't ensure that data is encrypted. If data falls into the wrong hands, anyone can read it. To fix this, we use HTTPS, built on top of HTTP. HTTPS utilizes an SSL/TLS security layer to guarantee that the data sent to the other party is encrypted and secure from interception.</p>
+            </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="card">
+            <h2>2. Man In the Middle (MITM) Attacks</h2>
+            
+            <div class="viz-container">
+                <div class="mitm-flow">
+                    <div class="node user-node">User (Client)</div>
+                    <div class="arrow">→</div>
+                    <div class="node hacker-node">Perpetrator<br><small>(Disguised IP)</small></div>
+                    <div class="arrow">→</div>
+                    <div class="node server-node">Web App</div>
+                </div>
+            </div>
+
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <ul>
+                    <li>A third party reads and intercepts HTTP packets, and can see any of the information being sent.</li>
+                    <li>The <em>only way</em> to prevent data from being stolen is by encrypting it such that only the server can understand it!</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>A Man-in-the-Middle attack occurs when a user believes they are sending requests directly to a web server, but a perpetrator has disguised their IP address to sit in the middle of the connection. If you send passwords or location data in plain HTTP, the perpetrator reads it all. The fix is encryption—scrambling the data so the middleman just sees gibberish.</p>
+            </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="card">
+            <h2>3. RSA (Public Key) Encryption</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <ul>
+                    <li>The server generates a <span class="key-badge pub-key">Public Key</span> and a <span class="key-badge priv-key">Private Key</span>.</li>
+                    <li>It broadcasts the Public Key over the network to the client.</li>
+                    <li>The client encodes any messages it wants to send using the Public Key.</li>
+                    <li>The server keeps the Private Key to itself—it is the <strong>only way</strong> to decrypt the message.</li>
+                </ul>
+                <p style="color: #ffcccc; margin-top: 10px;"><em>Caveat: The client has to make sure they are using the public key from the actual server, and not from a man in the middle!!</em></p>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>RSA is an asymmetric encryption system. The server shares its public key openly. You use it to encrypt your data. Once encrypted, <strong>only the private key</strong> can reverse the math to read the data. Because the server never shares its private key, a MITM attacker cannot decrypt your data. <strong>However, the main vulnerability is trust:</strong> How do you know the public key you just received actually belongs to the server, and not an attacker handing you their own public key?</p>
+            </div>
+        </section>
+
+        <!-- Section 4 -->
+        <section class="card">
+            <h2>4. Digital Certificates & CAs</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p>Certificates are used to verify that a server is actually who it says it is. Each server must register with a <strong>Certificate Authority (CA)</strong>.</p>
+                <p>The certificate provides information about the server: its owner, IP address, its public key, and the authority that registered it (verifiable via a digital signature).</p>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>To solve the "fake public key" problem, we use Certificates. Think of a certificate as a digital passport issued by a highly trusted centralized entity called a Certificate Authority (CA). The CA investigates the server and issues a certificate saying, "We verify that this specific Public Key legitimately belongs to Netflix.com."</p>
+            </div>
+        </section>
+
+        <!-- Section 5 -->
+        <section class="card">
+            <h2>5. The TLS Handshake Process</h2>
+            
+            <div class="viz-container" style="align-items: flex-start;">
+                <ol style="color: var(--text-main); line-height: 2;">
+                    <li><strong>Browser Connects:</strong> Asks server for identity.</li>
+                    <li><strong>Server Responds:</strong> Sends its Digital Certificate (signed by CA).</li>
+                    <li><strong>Browser Verifies:</strong> Checks CA's digital signature. If valid, browser generates a random "Session Key", encrypts it with the Server's Public Key, and sends it.</li>
+                    <li><strong>Server Decrypts:</strong> Uses its Private Key to decrypt the session key. A secure session is established!</li>
+                </ol>
+            </div>
+
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>How do we verify the CA's signature? CAs have their <em>own</em> public/private key pairs. The CA uses its <strong>private key</strong> to digitally sign the server's certificate. Your web browser (Chrome, Safari) comes pre-installed with the public keys of all trusted CAs. Your browser uses the CA's public key to decrypt the signature on the certificate. If it matches, you know a trusted CA issued it!</p>
+            </div>
+        </section>
+
+        <!-- Section 6 -->
+        <section class="card">
+            <h2>6. The Fatal Flaw: Can we trust CAs?</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p>What if a CA got hacked? Then a malicious actor could start giving themselves certificates for domain names that they don’t own.</p>
+                <p><strong>What we need is Certificate Transparency.</strong></p>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>The entire SSL/TLS system relies heavily on centralized Certificate Authorities. If a malicious actor hacks a CA, they can issue a perfectly valid, signed certificate that says, "I am Netflix.com" but attaches the hacker's public key. Your browser will trust it, and the MITM attack succeeds. We need a system where CAs are held publicly accountable.</p>
+            </div>
+        </section>
+
+        <!-- Section 7 -->
+        <section class="card">
+            <h2>7. Certificate Transparency (Logs, Auditors, Monitors)</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p>Certificate Transparency is a way of publicly broadcasting all issued certificates so that bogus certificates can be quickly noticed and thrown out.</p>
+                <ul>
+                    <li><strong>Certificate Logs:</strong> Append-only lists where CAs must publish all certs.</li>
+                    <li><strong>Auditors:</strong> Web browsers that query the logs to ensure a cert is in it.</li>
+                    <li><strong>Monitors:</strong> Programs run by domain owners (e.g., Netflix) that poll the logs looking for bogus certificates issued in their name.</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>CAs are now forced to add every certificate they issue to public, append-only logs. When your browser (the Auditor) receives a certificate, it checks the Log to ensure it's published. Meanwhile, companies run Monitors. Netflix's Monitor constantly scans the logs. If it sees a certificate issued for Netflix that it didn't authorize, it immediately knows a CA was hacked and revokes the bogus certificate.</p>
+                <p><em>The Vulnerability:</em> What if the server hosting the log lies? It could show the Auditor (your browser) the fake entry, but hide it from the Monitor (Netflix) so they never catch it.</p>
+            </div>
+        </section>
+
+        <!-- Section 8 -->
+        <section class="card">
+            <h2>8. Securing Logs with Merkle Trees</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p>How can we detect if the log server isn't lying? <strong>Merkle Trees!!</strong></p>
+                <ul>
+                    <li>Generate a Merkle Tree from the log to get the root hash.</li>
+                    <li>To ensure a sequence of elements is in the tree, recreate it on the browser and see if root hashes match.</li>
+                    <li>Optimized to only need <em>log(n)</em> elements (just the hashes from opposite branches).</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>To prevent logs from lying, we use cryptographic proofs called Merkle Trees. A Merkle tree hashes pairs of data all the way up to a single Root Hash. To prove a certificate is in the log, your browser doesn't have to download the entire multi-gigabyte log. It only needs the hashes of the opposite branches to calculate its way up to the Root Hash. Because hashing is deterministic and collision-resistant, faking this proof is mathematically near-impossible.</p>
+            </div>
+        </section>
+
+        <!-- Section 9 -->
+        <section class="card">
+            <h2>9. Merkle Tree Proof Visualized</h2>
+            
+            <div class="viz-container">
+                <p style="margin-bottom: 15px; text-align: center;"><strong>Question:</strong> Is certificate <span class="highlight-blue">c1</span> actually in the log?</p>
+                <div class="tree">
+                    <!-- Root -->
+                    <div class="tree-row">
+                        <div class="tree-node">tyg4 (Root)</div>
+                    </div>
+                    <!-- Level 1 -->
+                    <div class="tree-row">
+                        <div class="tree-node">143c</div>
+                        <div class="tree-node proof-node">99j7</div>
+                    </div>
+                    <!-- Level 2 (Leaves) -->
+                    <div class="tree-row" style="gap: 20px;">
+                        <div class="tree-node target-node">a12x (c1)</div>
+                        <div class="tree-node proof-node">45ty (c2)</div>
+                        <div class="tree-node">4cv7 (c3)</div>
+                        <div class="tree-node">0opi (c4)</div>
+                    </div>
+                </div>
+                <div class="math-block">
+                    Gather opposite branches: <span class="highlight">45ty</span> and <span class="highlight">99j7</span><br><br>
+                    If H( H( H(<span class="highlight-blue">c1</span>) + <span class="highlight">45ty</span> ) + <span class="highlight">99j7</span> ) == tyg4<br>
+                    ...we know it is valid!
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>To prove `c1` is in the tree, the log server provides `c1`, plus the hashes `45ty` and `99j7`. The browser hashes `c1` to get `a12x`. It concatenates `a12x` with the opposite branch `45ty` and hashes them to get `143c`. Finally, it concatenates `143c` with `99j7` and hashes them to get `tyg4`. Because `tyg4` matches the known Root Hash, the browser is 100% certain the certificate is in the log!</p>
+            </div>
+        </section>
+
+        <!-- Section 10 -->
+        <section class="card">
+            <h2>10. Fork Consistency & The Gossip Pool</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <ul>
+                    <li><strong>Fork Attack:</strong> Log shows monitors and browsers different versions of the log.</li>
+                    <li>To prevent this, browsers exchange Merkle tree roots with monitors to see if they differ (Gossip Pool).</li>
+                    <li>Merkle trees can be used to prove one tree is a prefix of the other (showing how the root of the earlier tree combines with new elements to output the new root).</li>
+                </ul>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>A corrupt log could try a "Fork Attack"—maintaining two versions of the truth. It shows a fake log to your browser, and a clean log to the Monitor. To catch this, browsers and monitors use a "Gossip Pool." They constantly talk to each other in the background, comparing the Root Hashes they are seeing. If the hashes don't match, they know the log server is forked and corrupt. Furthermore, "prefix proofs" ensure that as new certificates are appended, no historical certificates were secretly deleted.</p>
+            </div>
+        </section>
+
+        <!-- Section 11 -->
+        <section class="card">
+            <h2>11. Conclusion & Limitations</h2>
+            <div class="slide-text">
+                <h4>📝 From the Whiteboard</h4>
+                <p><strong>Certificate Transparency is not perfect.</strong> While cryptographic proofs are useful for pointing out a bad actor, they can’t do so instantly. A malicious CA can still get away with stealing passwords for a small period of time until a monitor catches it.</p>
+            </div>
+            <div class="instructor-notes">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>This system relies on "eventual consistency." It takes a short amount of time for the Monitors to scan the logs, find the bogus certificate, and revoke it. During that tiny window, a hacker might succeed. However, Certificate Transparency introduces the core concept of dealing with <strong>decentralized, distributed systems where we cannot trust the actors</strong>. We use cryptographic proofs and gossip networks to establish truth—which is the exact foundation we will use when learning about Blockchains and Bitcoin!</p>
+            </div>
+        </section>
+
+    </main>
+
+</body>
+</html>

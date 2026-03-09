@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Spark vs. MapReduce | Study Guide</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --spark-blue: #2563eb;
+            --spark-light: #eff6ff;
+            --mr-red: #dc2626;
+            --mr-light: #fef2f2;
+            --accent: #f59e0b;
+            --border-color: #e2e8f0;
+            --success: #16a34a;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.7;
+        }
+
+        /* Vertical Feed Layout */
+        .feed-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            font-size: 2.8rem;
+            color: #0f172a;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        .header p {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+        }
+
+        /* Topic Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background-color: var(--spark-blue);
+        }
+
+        .card.mr-theme::before { background-color: var(--mr-red); }
+        .card.exam-theme::before { background-color: var(--accent); }
+
+        h2 {
+            font-size: 1.8rem;
+            color: #0f172a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            font-size: 1.2rem;
+            color: var(--text-main);
+            margin: 20px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        p { margin-bottom: 15px; }
+        
+        ul { margin-left: 25px; margin-bottom: 15px; }
+        li { margin-bottom: 8px; }
+
+        .highlight {
+            background-color: #fffbeb;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #b45309;
+        }
+
+        /* Callout Boxes */
+        .callout {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            background: #f8fafc;
+            border-left: 4px solid var(--border-color);
+        }
+        .callout.slide-notes { background: var(--spark-light); border-left-color: var(--spark-blue); }
+        .callout.instructor-notes { background: #fefce8; border-left-color: var(--accent); }
+
+        .callout-title {
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            color: white;
+            font-family: monospace;
+            text-align: center;
+        }
+
+        /* Disk I/O Flow Visual */
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .node-box {
+            background: #334155;
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #475569;
+        }
+        .node-box.disk { border-color: var(--mr-red); background: #451a1a; }
+        .node-box.ram { border-color: var(--spark-blue); background: #1e3a8a; }
+        .node-box.fail { border-color: var(--danger); background: #7f1d1d; position: relative;}
+        .node-box.fail::after {
+            content: '❌ CRASHED';
+            position: absolute;
+            top: -12px;
+            right: -10px;
+            background: var(--danger);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        /* Nodes Grid for Dependencies */
+        .node-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .node-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .arrow-down { color: #94a3b8; font-size: 1.5rem; }
+
+        /* Wide Dependency SVG Line Wrapper */
+        .svg-container {
+            width: 100%;
+            height: 100px;
+            position: relative;
+            margin: 10px 0;
+        }
+
+        /* Term Glossary */
+        .term-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        @media (min-width: 600px) {
+            .term-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .term-card {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--text-muted);
+        }
+        .term-card strong { color: #0f172a; display: block; margin-bottom: 5px; }
+
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <!-- Header -->
+        <div class="header">
+            <h1>Apache Spark vs. MapReduce</h1>
+            <p>Complete In-Depth Study Guide • Continuous Vertical Feed</p>
+        </div>
+
+        <!-- Section 1 -->
+        <div class="card">
+            <h2>1. Introduction & Background</h2>
+            <div class="callout slide-notes">
+                <div class="callout-title">📊 Slide Visuals</div>
+                <ul>
+                    <li><strong>Spark:</strong> A dataflow engine massively popular for batch computations.</li>
+                    <li>Demonstrates major performance improvements over MapReduce (a more naive solution).</li>
+                    <li>Extremely common in industry.</li>
+                </ul>
+            </div>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>Spark is an open-source batch processing framework created by researchers at UC Berkeley around a decade ago. It was designed specifically to solve the heavy inefficiencies found in the older MapReduce architecture by offering a more flexible "dataflow" pipeline.</p>
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="card mr-theme">
+            <h2>2. The Problems with MapReduce</h2>
+            
+            <div class="viz-container">
+                <p style="margin-bottom: 15px; color: #cbd5e1;">MapReduce Disk I/O Nightmare</p>
+                <div class="flow-row">
+                    <div class="node-box disk">HDFS (Disk)</div>
+                    <div>➔ read ➔</div>
+                    <div class="node-box">Map Job</div>
+                    <div>➔ write ➔</div>
+                    <div class="node-box disk">HDFS (Disk)</div>
+                    <div>➔ read ➔</div>
+                    <div class="node-box">Reduce Job</div>
+                </div>
+            </div>
+
+            <div class="callout slide-notes">
+                <div class="callout-title">📊 Slide Visuals</div>
+                <ul>
+                    <li>MapReduce is extremely inefficient for iterative jobs (e.g., PageRank).</li>
+                    <li><strong>Tons of disk I/O</strong> due to materializing intermediate state to HDFS.</li>
+                    <li>Many redundant maps/sorts when not actually necessary.</li>
+                </ul>
+            </div>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>If you are running a "for loop" over a graph (like calculating PageRank), MapReduce is terrible. Every time a MapReduce job finishes a step, it <span class="highlight">must write its input and output to the underlying file store (HDFS)</span>. The next step then has to read from the disk again. 99% of the time, we don't care about these intermediate saves. All this disk reading/writing wastes massive amounts of time.</p>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="card">
+            <h2>3. The Solution: RDDs</h2>
+            <div class="callout slide-notes">
+                <div class="callout-title">📊 Slide Visuals</div>
+                <ul>
+                    <li>Instead of materializing state to disk, Spark uses <strong>Resilient Distributed Datasets (RDDs)</strong>.</li>
+                    <li><strong>In-memory</strong> data structures representing variables (held across multiple nodes).</li>
+                    <li><strong>Lineage:</strong> Spark keeps track of the lineage of each RDD (it knows exactly what computations were performed to get that specific value).</li>
+                </ul>
+            </div>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>Spark tries to keep the majority of intermediate data in <span class="highlight">RAM (Memory)</span> rather than writing it to a hard drive. By tracking the "lineage," Spark builds a map of the data flow. If you apply transformations to make a new RDD, Spark remembers the recipe to recreate it rather than saving the intermediate physical file.</p>
+            </div>
+        </div>
+
+        <!-- Section 4 & 5 -->
+        <div class="card">
+            <h2>4. Fault Tolerance & Narrow Dependencies</h2>
+            
+            <p>Because memory is volatile, running computations in RAM means if a node fails, data is lost. Spark uses the Lineage Graph to handle this efficiently.</p>
+
+            <div class="viz-container">
+                <p style="margin-bottom: 5px; color: #cbd5e1;">Narrow Dependency Failure Scenario</p>
+                <p style="font-size: 0.85em; color: #94a3b8; margin-bottom: 20px;">No inter-node communication required.</p>
+                <div class="node-grid">
+                    <div class="node-col">
+                        <div class="node-box ram">Node 1 Data</div>
+                        <div class="arrow-down">⬇</div>
+                        <div class="node-box">Map URLs</div>
+                    </div>
+                    <div class="node-col">
+                        <div class="node-box ram">Node 2 Data</div>
+                        <div class="arrow-down">⬇</div>
+                        <div class="node-box">Map URLs</div>
+                    </div>
+                    <div class="node-col">
+                        <div class="node-box fail">Node 3 Data</div>
+                        <div class="arrow-down" style="color:#ef4444">⬇</div>
+                        <div class="node-box fail" style="opacity: 0.5;">Map URLs</div>
+                    </div>
+                </div>
+                <p style="margin-top: 20px; color: #4ade80; font-size: 0.9rem;">
+                    ✅ Fix: Node 1 and Node 2 simply take over Node 3's lost initial data and run the computation locally. Fast recovery!
+                </p>
+            </div>
+
+            <div class="callout slide-notes">
+                <div class="callout-title">📊 Slide Visuals</div>
+                <p>Narrow dependency means computation is local to one node. If Node 3 fails, we just re-perform its computations on Node 1 and Node 2 without altering their existing states.</p>
+            </div>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>In a Narrow Dependency, there is <strong>NO inter-node communication</strong>. If Node 3 dies, the system assigns Node 3's initial dataset to the surviving nodes. Recovery is fast and highly parallelized.</p>
+            </div>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="card mr-theme">
+            <h2>5. Fault Tolerance: Wide Dependencies</h2>
+
+            <div class="viz-container">
+                <p style="margin-bottom: 5px; color: #cbd5e1;">Wide Dependency Failure Scenario</p>
+                <p style="font-size: 0.85em; color: #94a3b8; margin-bottom: 10px;">Requires massive network shuffling across all nodes.</p>
+                
+                <div class="node-grid">
+                    <div class="node-box ram">Node 1 (Mixed Data)</div>
+                    <div class="node-box ram">Node 2 (Mixed Data)</div>
+                    <div class="node-box ram">Node 3 (Mixed Data)</div>
+                </div>
+
+                <div class="svg-container">
+                    <svg width="100%" height="100%">
+                        <!-- Lines from Node 1 -->
+                        <line x1="16.6%" y1="0" x2="16.6%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="16.6%" y1="0" x2="50%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="16.6%" y1="0" x2="83.3%" y2="100" stroke="#64748b" stroke-width="2" />
+                        
+                        <!-- Lines from Node 2 -->
+                        <line x1="50%" y1="0" x2="16.6%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="50%" y1="0" x2="50%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="50%" y1="0" x2="83.3%" y2="100" stroke="#64748b" stroke-width="2" />
+
+                        <!-- Lines from Node 3 -->
+                        <line x1="83.3%" y1="0" x2="16.6%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="83.3%" y1="0" x2="50%" y2="100" stroke="#64748b" stroke-width="2" />
+                        <line x1="83.3%" y1="0" x2="83.3%" y2="100" stroke="#64748b" stroke-width="2" />
+                    </svg>
+                </div>
+
+                <div class="node-grid" style="margin-top:0;">
+                    <div class="node-box">Node 1 (Grouped)</div>
+                    <div class="node-box">Node 2 (Grouped)</div>
+                    <div class="node-box fail">Node 3 (Grouped)</div>
+                </div>
+
+                <p style="margin-top: 25px; color: #f87171; font-size: 0.9rem;">
+                    ❌ Disaster: Node 3's final data relied on inputs from Node 1 and Node 2. We must restart the ENTIRE job on all nodes to get Node 3's data back!
+                </p>
+            </div>
+
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>A Wide Dependency occurs when an operation requires data to be shuffled across the network (e.g., a `groupByKey` operation). If Node 3 crashes <em>after</em> this massive shuffle, you can't just reassign its work easily. The only way to get Node 3's data back is to <span class="highlight">restart the entire process from the very beginning across all nodes</span>. This takes much longer!</p>
+            </div>
+        </div>
+
+        <!-- Section 7 -->
+        <div class="card">
+            <h2>6. The Fix: Checkpointing</h2>
+            <div class="callout slide-notes">
+                <div class="callout-title">📊 Slide Visuals</div>
+                <p>To avoid this situation, Spark allows developers to <strong>checkpoint</strong> certain application state to disk so that if Node 3 were to crash, we would have the result of the wide dependency saved.</p>
+            </div>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Instructor's Explanation</div>
+                <p>Because restarting a wide dependency from scratch is terrible for performance, developers can instruct Spark to take a "Checkpoint" immediately after an expensive wide dependency operation. This saves that specific in-memory state to a persistent hard drive (like HDFS). If Node 3 crashes now, Spark simply reads Node 3's last state from the disk, fires up a replacement node, and continues.</p>
+            </div>
+        </div>
+
+        <!-- Section 8 -->
+        <div class="card">
+            <h2>7. Conclusion & Trade-offs</h2>
+            <div class="callout instructor-notes">
+                <div class="callout-title">🎙️ Final Verdict</div>
+                <p>By utilizing RAM and refusing to write every single step to a hard drive, Spark achieves massive speed/performance gains over MapReduce. However, it comes with trade-offs:</p>
+                <ul>
+                    <li><strong>Cost:</strong> It requires much more RAM (which is more expensive than disk storage).</li>
+                    <li><strong>Complexity:</strong> It has slightly worse/more complex fault tolerance than MapReduce (which was originally built by Google specifically to survive constant node preemptions).</li>
+                </ul>
+                <p><strong>Industry Consensus:</strong> The massive increase in speed is 100% worth the trade-offs. MapReduce is now seldom used for large-scale batch processing, and Spark is the industry standard.</p>
+            </div>
+        </div>
+
+        <!-- Section 9: Exam Review -->
+        <div class="card exam-theme">
+            <h2>📝 Quick Exam Review Terms</h2>
+            <div class="term-grid">
+                <div class="term-card">
+                    <strong>MapReduce</strong>
+                    Old, highly rigid framework. Very slow because it relies on heavy Disk I/O to save every intermediate step.
+                </div>
+                <div class="term-card">
+                    <strong>Apache Spark</strong>
+                    Modern dataflow engine. Extremely fast because it prioritizes keeping data in-memory (RAM).
+                </div>
+                <div class="term-card">
+                    <strong>RDD (Resilient Distributed Dataset)</strong>
+                    Spark's core data structure. In-memory variables that span across multiple nodes in a cluster.
+                </div>
+                <div class="term-card">
+                    <strong>Lineage</strong>
+                    Spark's internal memory map/recipe of exactly which operations were performed to create an RDD.
+                </div>
+                <div class="term-card">
+                    <strong>Narrow Dependency</strong>
+                    Operations that require NO node-to-node communication (like local mapping). Fast failure recovery.
+                </div>
+                <div class="term-card">
+                    <strong>Wide Dependency</strong>
+                    Operations that require massive network shuffling across nodes. Slow/expensive failure recovery.
+                </div>
+                <div class="term-card">
+                    <strong>Checkpointing</strong>
+                    Manually saving a specific step to a hard drive to prevent total re-computation if a node fails during a Wide Dependency.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

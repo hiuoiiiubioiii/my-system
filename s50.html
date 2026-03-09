@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Systems Design Interview: Study Notes</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-main: #1e293b;
+            --text-muted: #475569;
+            --primary: #2563eb;
+            --primary-light: #eff6ff;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --code-bg: #0f172a;
+            --code-text: #e2e8f0;
+            --accent: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            padding: 3rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1rem 4rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .step-badge {
+            display: inline-block;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            background: #fef08a;
+            padding: 0.1rem 0.3rem;
+            border-radius: 4px;
+        }
+
+        /* Visualizations */
+        .visualization-box {
+            background: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: monospace;
+        }
+
+        .math-block {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            font-family: inherit;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: var(--code-text);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            margin: 1rem 0;
+        }
+
+        .code-comment {
+            color: #64748b;
+        }
+
+        .code-keyword {
+            color: #c586c0;
+        }
+
+        .code-function {
+            color: #dcdcaa;
+        }
+
+        .code-string {
+            color: #ce9178;
+        }
+
+        /* Architecture Diagram (CSS) */
+        .diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 2rem 0;
+            padding: 1rem;
+            background: var(--bg-color);
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .node {
+            background: var(--card-bg);
+            border: 2px solid var(--primary);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            min-width: 120px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .node-db {
+            border-color: var(--accent);
+            border-radius: 50% 50% 50% 50% / 12% 12% 88% 88%;
+            padding: 2rem 1rem;
+        }
+
+        .arrow {
+            color: var(--text-muted);
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        /* Tradeoff Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        th {
+            background: var(--bg-color);
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .diagram {
+                flex-direction: column;
+            }
+            .arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Systems Design Interview Blueprint</h1>
+        <p>A comprehensive, scrollable study guide based on the 6-step framework for tackling any technical systems design interview.</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- Introduction -->
+        <div class="card">
+            <span class="step-badge">Introduction</span>
+            <h2>Why Structure Matters</h2>
+            <p>Possessing systems design knowledge is not enough. If your design on the whiteboard is a jumbled mess, you will appear disorganized to the interviewer.</p>
+            <p><strong>The Goal:</strong> You must convey your knowledge in an <span class="highlight">effective, concise, and organized manner</span>. There is a universally accepted "proper way" to tackle these interviews, broken down into the vertical feed below.</p>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="card">
+            <span class="step-badge">Step 1</span>
+            <h2>Requirements Clarifications</h2>
+            <p>Interview prompts are usually very broad (e.g., <em>"Design Uber"</em> or <em>"Design Twitter"</em>). You cannot design all of Uber in 45 minutes. You must immediately narrow down the scope by asking the interviewer questions.</p>
+            
+            <div class="visualization-box">
+                <strong>📋 The Interviewer Checklist:</strong><br><br>
+                [ ] <strong>Functional Requirements (Features):</strong> What exactly are we building?<br>
+                <em>&nbsp;&nbsp;&nbsp;&nbsp;↳ Ex (Twitter): Can we post tweets? Do we have DMs? Images?</em><br><br>
+                [ ] <strong>Scale / Users:</strong> How many total users? Daily active users?<br><br>
+                [ ] <strong>Performance Goals:</strong> What is the main bottleneck to solve?<br>
+                <em>&nbsp;&nbsp;&nbsp;&nbsp;↳ Ex (Twitter): Are we optimizing for fast tweet posting, or extremely fast home-page reads?</em>
+            </div>
+            <p>At the end of the day, your interviewer is only interested in a small, specific part of the application. Find out what it is before you start drawing.</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="card">
+            <span class="step-badge">Step 2</span>
+            <h2>Capacity Estimations</h2>
+            <p>You need to do some math on the whiteboard to prove you understand the scale of the data you will be storing. This dictates the hardware, caching, and partitioning you will need.</p>
+            
+            <ul>
+                <li><strong>Ratio of Reads to Writes:</strong> A "read-heavy" application requires a completely different architecture and database choice than a "write-heavy" application.</li>
+                <li><strong>Number of Operations:</strong> How many operations per day? What is the size of each?</li>
+            </ul>
+
+            <div class="visualization-box math-block">
+                <strong>🧮 Whiteboard Math Cheat Sheet:</strong><br><br>
+                1 Character = 2 bytes<br>
+                Average 140-char Tweet = ~300 bytes<br>
+                Average Image Upload = ~10 Megabytes<br>
+                High-Quality Video = ~1 Gigabyte<br><br>
+                <em>Why do this math?</em> If you calculate you need to store 10 Terabytes of data, and a standard server holds ~10TB of disk space, you know immediately that you must partition/shard your database across multiple machines.
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="card">
+            <span class="step-badge">Step 3</span>
+            <h2>API Definitions</h2>
+            <p>Do not waste too much time here. Keep it basic. You just need to show how the client (e.g., the mobile app) communicates with your backend server using REST endpoints.</p>
+
+            <div class="code-block">
+                <span class="code-comment">// 1. User Account Creation Endpoint</span><br>
+                <span class="code-keyword">POST</span> <span class="code-function">create_user</span>(<span class="code-string">email</span>, <span class="code-string">password_hash</span>)<br><br>
+                
+                <span class="code-comment">// 2. Core Feature Endpoint (e.g. Twitter)</span><br>
+                <span class="code-keyword">POST</span> <span class="code-function">send_tweet</span>(<span class="code-string">user_id</span>, <span class="code-string">text</span>)
+            </div>
+            <p><em>Note:</em> In the real world, these endpoints take in much more data (headers, auth tokens), but for an interview, just write out the bare minimum function calls to show you understand the concept.</p>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="card">
+            <span class="step-badge">Step 4</span>
+            <h2>Data Tables / Schemas</h2>
+            <p>You do not need to commit to a specific database type (SQL vs NoSQL) just yet. You simply need to outline what information you will be storing.</p>
+            
+            <div class="code-block">
+                <span class="code-comment">/* Tweets Table Schema */</span><br>
+                {<br>
+                &nbsp;&nbsp;<span class="code-string">"User_id"</span>: <span class="code-keyword">int</span>,<br>
+                &nbsp;&nbsp;<span class="code-string">"Text"</span>: <span class="code-keyword">string</span>,<br>
+                &nbsp;&nbsp;<span class="code-string">"Timestamp"</span>: <span class="code-keyword">date</span>,<br>
+                &nbsp;&nbsp;<span class="code-string">"Metadata"</span>: <span class="code-keyword">json</span><br>
+                }
+            </div>
+            <p><em>Instructor Tip:</em> It is completely fine (and expected in a microservices architecture) to have multiple different database tables holding different pieces of the pie.</p>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="card">
+            <span class="step-badge">Step 5</span>
+            <h2>Get Designing! (The Architecture)</h2>
+            <p>This is where you actually draw the system blocks. Always ask yourself: <em>"How does my design meet the functional requirements we established in Step 1?"</em> Inspect every piece to ensure there are no single points of failure.</p>
+
+            <div class="diagram">
+                <div class="node">📱 Client<br>(Mobile App)</div>
+                <div class="arrow">→</div>
+                <div class="node">⚖️ Load<br>Balancer</div>
+                <div class="arrow">→</div>
+                <div class="node">⚙️ Server<br>(Microservice)</div>
+                <div class="arrow">→</div>
+                <div class="node node-db">🗄️ Database<br>(Sharded)</div>
+            </div>
+
+            <p><strong>Key Concepts to Include/Discuss on the Whiteboard:</strong></p>
+            <ul>
+                <li><strong>Load Balancing:</strong> Distributes traffic so no single server gets overwhelmed.</li>
+                <li><strong>Replication:</strong> Copying data across databases so it isn't lost if a machine dies.</li>
+                <li><strong>Sharding:</strong> Splitting data across multiple machines based on your capacity math.</li>
+                <li><strong>Microservices:</strong> Avoid "monoliths." Break the app into smaller, dedicated services (e.g., an Auth service, a Notification service).</li>
+            </ul>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="card">
+            <span class="step-badge">Step 6</span>
+            <h2>You Will Get Grilled (Defending Tradeoffs)</h2>
+            <p>The interviewer is not just going to nod along. They will look at your architecture and say, <em>"What if this server crashes? Why did you do this? What about this edge case?"</em></p>
+            
+            <p>Your job is to prove you didn't just memorize a diagram from a textbook. You do this by explaining <strong>TRADEOFFS</strong>. You don't need a 100% flawless design, you need a feasible solution that you can logically defend.</p>
+
+            <table>
+                <tr>
+                    <th>Technology Choice</th>
+                    <th>Pros (Why you chose it)</th>
+                    <th>Cons (The Tradeoff)</th>
+                </tr>
+                <tr>
+                    <td><strong>WebSockets</strong> (vs Long Polling)</td>
+                    <td>Real-time, persistent connection (Great for chat apps).</td>
+                    <td>Harder to scale, keeps connections open consuming server memory.</td>
+                </tr>
+                <tr>
+                    <td><strong>Microservices</strong> (vs Monolith)</td>
+                    <td>Can scale individual parts of the app independently.</td>
+                    <td>Complex network latency, harder to debug system-wide issues.</td>
+                </tr>
+            </table>
+            
+            <p><em>Example Defense:</em> "No one cares if you can design Facebook Messenger unless you can explain *why* you chose WebSockets over Long-Polling for that specific scenario."</p>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="card" style="text-align: center; background: var(--text-main); color: white;">
+            <h2>🏁 Ready to Practice</h2>
+            <p style="color: #cbd5e1; margin-bottom: 0;">This concludes the conceptual framework. Now that you know the 6 steps (Requirements -> Math -> API -> Schema -> Design -> Tradeoffs), apply them to specific system design problems.</p>
+        </div>
+
+    </main>
+
+</body>
+</html>

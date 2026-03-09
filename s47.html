@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Collaborative Text Editing</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;600&display=swap');
+
+        :root {
+            --bg-main: #0f111a;
+            --bg-card: #1e212b;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-yellow: #f59e0b;
+            --font-main: 'Inter', sans-serif;
+            --font-mono: 'Fira Code', monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Feed Layout */
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        header {
+            border-bottom: 2px solid #334155;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            color: #f8fafc;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--accent-blue);
+            padding-left: 1rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            color: #cbd5e1;
+            margin-top: 1.5rem;
+        }
+
+        section {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Instructor Context Blocks */
+        .instructor-notes {
+            background-color: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.25rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .instructor-notes strong {
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Visualizations */
+        .visual-box {
+            background-color: #000;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: var(--font-mono);
+        }
+
+        /* Array Visualization */
+        .array-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .array-container {
+            display: flex;
+            gap: 2px;
+            background: #334155;
+            padding: 2px;
+            border-radius: 4px;
+        }
+
+        .array-cell {
+            background: #1e212b;
+            color: #fff;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .array-cell.insert-a { background: rgba(16, 185, 129, 0.2); border: 1px solid var(--accent-green); }
+        .array-cell.insert-b { background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-yellow); }
+
+        .arrow {
+            color: var(--text-muted);
+            font-size: 1.5rem;
+        }
+
+        .conflict-result {
+            color: var(--accent-red);
+            text-align: center;
+            font-weight: bold;
+            font-family: var(--font-main);
+            margin-top: 1rem;
+        }
+
+        /* OT Transformation Visualization */
+        .ot-diagram {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            position: relative;
+        }
+
+        .ot-node {
+            background: #1e212b;
+            border: 1px solid #334155;
+            padding: 1rem;
+            border-radius: 8px;
+            width: 40%;
+        }
+
+        .ot-operation {
+            background: #334155;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            font-size: 0.85rem;
+        }
+
+        .ot-cross {
+            position: relative;
+            margin: 1rem 0;
+            font-size: 2rem;
+            color: var(--text-muted);
+        }
+
+        .ot-transformed {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px dashed var(--accent-blue);
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        /* CRDT Fractional Indexing Visualization */
+        .crdt-diagram {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .crdt-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .crdt-char {
+            background: #e2e8f0;
+            color: #0f111a;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: bold;
+            border-radius: 4px;
+            border: 2px solid transparent;
+        }
+
+        .crdt-index {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .crdt-new .crdt-char {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+            border: 2px dashed var(--accent-green);
+        }
+        .crdt-new .crdt-index {
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        /* Checklists */
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            background: rgba(255, 255, 255, 0.05);
+            margin-bottom: 0.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .checklist li::before {
+            content: '✅';
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Utility */
+        .highlight { color: var(--accent-yellow); font-weight: bold; }
+        .badge { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-family: var(--font-mono); }
+
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <header>
+            <h1>Collaborative Text Editing</h1>
+            <p style="color: var(--text-muted);">Systems Design Deep Dive: Overcoming concurrency conflicts in real-time document editing.</p>
+        </header>
+
+        <!-- SECTION 1: Background & Problem -->
+        <section>
+            <h2>1. The Core Problem</h2>
+            <p>Platforms like Google Docs and VSCode allow multiple users to edit the same data at once. The ultimate system goals are to <strong>avoid conflicts</strong> and ensure every local copy of the document <strong>converges to a consistent state</strong> that makes sense.</p>
+            
+            <h3>Why is this hard? (Array writes are not commutative)</h3>
+            <p>If we treat a text document like a simple array of characters, concurrent edits break the system. <em>Commutative</em> means the order of operations doesn't matter. But with arrays, inserting an item shifts all subsequent indexes. The order <strong>does</strong> matter.</p>
+
+            <div class="visual-box">
+                <div style="text-align: center; margin-bottom: 1rem; color: var(--text-muted);">Initial State on two devices: <span class="badge">[p, o, o]</span></div>
+                
+                <div class="array-row">
+                    <div>
+                        <div style="font-size: 0.8rem; text-align: center; margin-bottom: 5px;">User A: Insert (s, 0)</div>
+                        <div class="array-container">
+                            <div class="array-cell insert-a">s</div>
+                            <div class="array-cell">p</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell">o</div>
+                        </div>
+                    </div>
+                    <div class="arrow">|</div>
+                    <div>
+                        <div style="font-size: 0.8rem; text-align: center; margin-bottom: 5px;">User B: Insert (p, 3)</div>
+                        <div class="array-container">
+                            <div class="array-cell">p</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell insert-b">p</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center; border-top: 1px dashed #334155; padding-top: 1rem; margin-top: 1rem;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Broadcasting changes to each other...</div>
+                    <div class="array-row">
+                        <div class="array-container">
+                            <div class="array-cell insert-a">s</div>
+                            <div class="array-cell">p</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell insert-b">p</div>
+                        </div>
+                        <div class="arrow">VS</div>
+                        <div class="array-container">
+                            <div class="array-cell insert-a">s</div>
+                            <div class="array-cell">p</div>
+                            <div class="array-cell">o</div>
+                            <div class="array-cell insert-b">p</div>
+                            <div class="array-cell">o</div>
+                        </div>
+                    </div>
+                    <div class="conflict-result">NOT THE SAME!! State Divergence.</div>
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <strong>💡 Instructor Explanation</strong>
+                Because array indices shift when a new character is added, an insertion at "index 3" means something entirely different after someone else has inserted a character at "index 0". Without a reconciliation system, user documents fall completely out of sync.
+            </div>
+        </section>
+
+        <!-- SECTION 2: Operational Transform -->
+        <section>
+            <h2>2. Solution 1: Operational Transform (OT)</h2>
+            <p>Operational Transform (OT) fixes the shifting index problem using a complex mathematical transformation function (<strong>Function T</strong>).</p>
+
+            <div class="visual-box">
+                <div class="ot-diagram">
+                    <div class="ot-node">
+                        <div style="color: var(--accent-blue); font-weight: bold; margin-bottom: 10px;">User A</div>
+                        <div class="array-container" style="justify-content: center; margin-bottom: 10px;">
+                            <div class="array-cell">A</div><div class="array-cell">B</div><div class="array-cell">C</div>
+                        </div>
+                        <div class="ot-operation">insert(0, "A")</div>
+                        
+                        <!-- Applied cross operation -->
+                        <div class="ot-transformed" style="margin-top: 2rem;">
+                            T( insert(2, "D") | insert(0, "A") )<br>
+                            = <strong>insert(3, "D")</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="ot-cross">
+                        ↘ ↙<br>
+                        ↗ ↖
+                    </div>
+
+                    <div class="ot-node">
+                        <div style="color: var(--accent-yellow); font-weight: bold; margin-bottom: 10px;">User B</div>
+                        <div class="array-container" style="justify-content: center; margin-bottom: 10px;">
+                            <div class="array-cell">B</div><div class="array-cell">C</div><div class="array-cell">D</div>
+                        </div>
+                        <div class="ot-operation">insert(2, "D")</div>
+                        
+                        <!-- Applied cross operation -->
+                        <div class="ot-transformed" style="margin-top: 2rem;">
+                            T( insert(0, "A") | insert(2, "D") )<br>
+                            = <strong>insert(0, "A")</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instructor-notes">
+                <strong>💡 Instructor Explanation</strong>
+                OT accepts relative changes and pushes them through Function T. If User A types at index 0, Function T tells User B: <em>"Hey, User A just shifted everything right by 1. Your planned insertion at index 2 must be transformed to index 3."</em>
+                <br><br>
+                <strong>The Pitfall:</strong> Function T requires a <span class="highlight">Total Order</span> of updates. This means every edit must route through a central server (single leader) to get time-stamped in exact order. This creates a massive bottleneck and high latency for systems with millions of users.
+            </div>
+        </section>
+
+        <!-- SECTION 3: CRDTs -->
+        <section>
+            <h2>3. Solution 2: Text Editing CRDTs</h2>
+            <p><strong>CRDT</strong> (Conflict-Free Replicated Data Type) is an alternative that allows peer-to-peer merging without a central server. Since array inserts aren't commutative, CRDTs change the data model entirely: A document becomes a <strong>Set of (char, location) tuples</strong>.</p>
+
+            <h3>Fractional Indexing</h3>
+            <p>Instead of integers (0, 1, 2), every character gets an absolute, fractional floating-point coordinate.</p>
+
+            <div class="visual-box">
+                <div class="crdt-diagram">
+                    <div class="crdt-block">
+                        <div class="crdt-char">A</div>
+                        <div class="crdt-index">0.0</div>
+                    </div>
+                    
+                    <!-- NEW INSERT -->
+                    <div class="crdt-block crdt-new">
+                        <div style="font-size: 0.6rem; color: var(--accent-green); text-align: center; margin-bottom: 4px;">User A Inserts 'X'</div>
+                        <div class="crdt-char">X</div>
+                        <div class="crdt-index">0.25</div>
+                    </div>
+                    
+                    <!-- NEW INSERT -->
+                    <div class="crdt-block crdt-new" style="margin-left: 10px; margin-right: 10px;">
+                        <div style="font-size: 0.6rem; color: var(--accent-green); text-align: center; margin-bottom: 4px;">User B Inserts 'Y'</div>
+                        <div class="crdt-char">Y</div>
+                        <div class="crdt-index">0.5</div>
+                    </div>
+
+                    <div class="crdt-block">
+                        <div class="crdt-char">B</div>
+                        <div class="crdt-index">1.0</div>
+                    </div>
+                </div>
+                <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
+                    To reconstruct the document, the client simply sorts the Set by the location floats.<br>Result: <strong>A X Y B</strong>
+                </p>
+            </div>
+
+            <div class="instructor-notes">
+                <strong>💡 Instructor Explanation: Engineering Intricacies</strong>
+                Because coordinates are absolute, inserting text at the beginning of the document doesn't change the coordinates of the text at the end. Operations can arrive out of order! But there are massive edge cases to handle:
+                <ul>
+                    <li><strong>Concurrent Exact Inserts:</strong> Two users type in the exact same spot simultaneously and generate the same float (e.g., both get <code>0.25</code>). We need arbitrary tie-breakers (like comparing User IDs).</li>
+                    <li><strong>Floating Point Precision:</strong> Dividing space by 2 continuously (0.5, 0.25, 0.125...) eventually exceeds computer floating-point precision limits. The document must occasionally be re-indexed.</li>
+                    <li><strong>Interleaving Text:</strong> If User A pastes "HELLO" and User B pastes "WORLD" at the same spot, the system must group the blocks so it doesn't print "HWEOLRLLOD".</li>
+                    <li><strong>Deletions:</strong> You can't delete a character you don't know exists yet. Deletes require <em>Causal Broadcast</em> (using Lamport timestamps) to ensure the "insert" message is processed before the "delete" message.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- SECTION 4: Conclusion & Checklist -->
+        <section>
+            <h2>4. Conclusion & Review</h2>
+            <p>Building real-time collaboration is incredibly difficult. While <strong>Operational Transform</strong> is the battle-tested standard (used by Google Docs), <strong>CRDTs</strong> are the active field of research solving the latency and scaling bottlenecks of central servers.</p>
+
+            <h3 style="margin-top: 2rem; border-bottom: 1px solid #334155; padding-bottom: 0.5rem;">Quick Review Checklist</h3>
+            <ul class="checklist">
+                <li>
+                    <div>
+                        <strong>The Core Problem</strong><br>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Array writes are non-commutative; the order of application changes the final array state, leading to document divergence.</span>
+                    </div>
+                </li>
+                <li>
+                    <div>
+                        <strong>Operational Transform (OT)</strong><br>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Uses Function T to transform shifting indices. Requires a central server to establish a Total Order, which limits scalability and adds latency.</span>
+                    </div>
+                </li>
+                <li>
+                    <div>
+                        <strong>Text CRDTs & Fractional Indexing</strong><br>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Treats the document as a Set of characters with absolute floating-point locations. Allows peer-to-peer, commutative merging without a central server.</span>
+                    </div>
+                </li>
+                <li>
+                    <div>
+                        <strong>CRDT Edge Cases</strong><br>
+                        <span style="color: var(--text-muted); font-size: 0.9rem;">Must handle floating-point precision exhaustion, block-text interleaving, concurrent exact-location inserts, and require Causal Broadcast (Lamport clocks) for deletions.</span>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+    </div>
+
+</body>
+</html>

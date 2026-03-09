@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCP vs. UDP | In-Depth Study Feed</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --accent-blue: #4dabf7;
+            --accent-green: #69db7c;
+            --accent-red: #ff8787;
+            --accent-yellow: #ffd43b;
+            --note-bg: rgba(77, 171, 247, 0.1);
+            --note-border: #4dabf7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            margin-bottom: 1rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            border: 1px solid #2a2a2a;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.2rem;
+            color: var(--accent-blue);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.5rem 0;
+            color: #fff;
+        }
+
+        p {
+            margin-bottom: 1rem;
+        }
+
+        ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .teacher-note {
+            background-color: var(--note-bg);
+            border-left: 4px solid var(--note-border);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+        }
+
+        .teacher-note strong {
+            font-style: normal;
+            color: var(--accent-blue);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        /* Visualizations */
+        .visual-box {
+            background-color: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .diagram-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 1rem;
+        }
+
+        .node {
+            background-color: #333;
+            padding: 10px 20px;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: bold;
+            text-align: center;
+            border: 2px solid #555;
+            z-index: 2;
+        }
+
+        .node.client { border-color: var(--accent-blue); }
+        .node.server { border-color: var(--accent-green); }
+
+        .arrow-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .arrow {
+            width: 80%;
+            text-align: center;
+            font-size: 0.9rem;
+            padding: 5px 0;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .arrow-right { border-bottom: 2px solid var(--accent-blue); }
+        .arrow-right::after {
+            content: "►"; color: var(--accent-blue); position: absolute; right: -5px; bottom: -10px; font-size: 1.2rem;
+        }
+
+        .arrow-left { border-bottom: 2px solid var(--accent-green); }
+        .arrow-left::before {
+            content: "◄"; color: var(--accent-green); position: absolute; left: -5px; bottom: -10px; font-size: 1.2rem;
+        }
+
+        .buffer-visual {
+            width: 100%;
+            height: 40px;
+            background-color: #222;
+            border: 2px solid #555;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+
+        .buffer-fill {
+            background: linear-gradient(90deg, var(--accent-red), var(--accent-yellow));
+            width: 85%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-weight: bold;
+            color: #000;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .comp-card {
+            background-color: #222;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-top: 4px solid #555;
+        }
+
+        .comp-card.tcp { border-color: var(--accent-blue); }
+        .comp-card.udp { border-color: var(--accent-red); }
+
+        .emoji-art {
+            font-size: 3rem;
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 600px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main class="feed-container">
+        
+        <header>
+            <h1>TCP vs. UDP</h1>
+            <p>Comprehensive Transport Layer Protocol Study Guide</p>
+        </header>
+
+        <!-- Section 1 -->
+        <article class="card">
+            <h2>1. Background & The Network Layer</h2>
+            <p>At its core, a network is a highly complex, chaotic system of cables and routers sending unstructured 1s and 0s. To make sense of this chaos, we use <strong>Protocols</strong>.</p>
+            <p>A protocol is an established standard for formatting and sending data so all devices can extract useful information. TCP and UDP operate at the <strong>Transport Layer</strong> on top of an IP network. Their primary job is to deliver packets from Node A to Node B, but how they go about it is what separates them.</p>
+        </article>
+
+        <!-- Section 2 -->
+        <article class="card">
+            <h2>2. Transmission Control Protocol (TCP)</h2>
+            <p>TCP is the meticulous protocol. It provides <strong>reliable, ordered, and error-checked</strong> streams of bytes between two computers.</p>
+            <ul>
+                <li><strong>Ordered:</strong> Achieved via <em>Sequence Numbers</em>.</li>
+                <li><strong>Error-Checked:</strong> Achieved via <em>Checksums</em>.</li>
+            </ul>
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: Checksums</strong>
+                "Every self-contained packet includes a checksum (a mathematical sum of the bytes inside it). When the receiving computer gets the packet, it does the same math. If a bit accidentally flipped during transit due to network noise, the checksums won't match, and TCP knows the packet is corrupted and throws an error."
+            </div>
+        </article>
+
+        <!-- Section 3 -->
+        <article class="card">
+            <h2>3. The Three-Way Handshake</h2>
+            <p>Unlike UDP, TCP nodes cannot just start blasting data at each other. They must formally establish a connection first.</p>
+            
+            <div class="visual-box">
+                <div class="diagram-row">
+                    <div class="node client">Client (Host P)</div>
+                    <div class="arrow-container">
+                        <div class="arrow arrow-right">1. SYN (seq=x)</div>
+                        <div class="arrow arrow-left" style="margin-top:20px;">2. SYN (seq=y), ACK (x+1)</div>
+                        <div class="arrow arrow-right" style="margin-top:20px;">3. ACK (y+1)</div>
+                    </div>
+                    <div class="node server">Server (Host Q)</div>
+                </div>
+            </div>
+
+            <p><strong>Note:</strong> Every acknowledgement (ACK) value tells the other computer what sequence number it <em>expects to receive next</em>.</p>
+            
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: Why Random Sequence Numbers?</strong>
+                "If we always started at 1, malicious users could guess the sequence number, spoof packets, and inject malicious data into the connection. Starting with a random number prevents this."
+            </div>
+        </article>
+
+        <!-- Section 4 -->
+        <article class="card">
+            <h2>4. Reliable Transmission</h2>
+            <p>Because TCP guarantees ordered delivery, it has built-in mechanisms to handle lost packets.</p>
+            
+            <h3>Duplicate ACKs (Dup Ack)</h3>
+            <p>If the Sender sends packet #99 (which gets lost), and then sends packet #100, the Receiver will get #100. However, the receiver knows it is missing #99. It cannot accept #100 out of order. It will reply with "ACK 99" (meaning "I still need 99!"). The sender realizes the mistake and resends packet 99.</p>
+
+            <h3>Timeout-Based Estimates & Exponential Backoff</h3>
+            <p>If a sender doesn't receive an ACK within a certain time (based on the estimated Round Trip Time - RTT), it will resend the packet.</p>
+            
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: Protecting Against DDoS</strong>
+                "If a receiver goes offline, the sender shouldn't just spam the network every millisecond trying to resend data. Instead, it uses an <em>exponential backoff</em>. It waits 1 second, then 2, then 4, then 8... decreasing the frequency of retries. This ensures broken nodes don't accidentally cause a DDoS attack on the network."
+            </div>
+        </article>
+
+        <!-- Section 5 -->
+        <article class="card">
+            <h2>5. Flow Control (Protecting the Receiver)</h2>
+            <p>TCP regulates flow so one device doesn't overwhelm another device with too much data.</p>
+            
+            <div class="visual-box">
+                <p style="margin-bottom: 10px; color: var(--accent-red);">Receiver's Memory Buffer (Queue)</p>
+                <div class="buffer-visual">
+                    <div class="buffer-fill">85% Full</div>
+                </div>
+            </div>
+
+            <p>Every computer has a buffer in memory to hold incoming packets before the CPU processes them. If this buffer fills up, packets are dropped. In every ACK message, the receiver tells the sender exactly how many bytes of free space it has left. If the receiver has 0 room left, the sender pauses, waiting for a tiny "probe" packet to see when space opens up.</p>
+        </article>
+
+        <!-- Section 6 -->
+        <article class="card">
+            <h2>6. Congestion Control (Protecting the Network)</h2>
+            <p>While Flow Control protects the <em>receiver</em>, Congestion Control protects the actual <em>network links (cables/routers)</em> from congestive collapse.</p>
+
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: The Danger of Congestion</strong>
+                "If routers get overwhelmed, packets drop. Dropped packets trigger TCP retries. Retries mean MORE packets on the network, making the congestion even worse."
+            </div>
+
+            <h3>Mitigation: AIMD Strategy</h3>
+            <p>TCP uses a "Congestion Window" to limit packets in-flight. It uses <strong>Additive Increase, Multiplicative Decrease (AIMD)</strong>:</p>
+            <ul>
+                <li>📈 <strong>Additive Increase:</strong> Window size grows linearly and cautiously when transmissions are successful.</li>
+                <li>📉 <strong>Multiplicative Decrease:</strong> The millisecond it detects congestion (dropped packets), it cuts the window size completely in half to instantly relieve network pressure.</li>
+            </ul>
+        </article>
+
+        <!-- Section 7 -->
+        <article class="card">
+            <h2>7. Connection Termination</h2>
+            <p>Terminating a TCP connection uses a <strong>Four-Way Handshake</strong> because both halves of the connection must terminate independently.</p>
+            
+            <ul>
+                <li>Initiator sends FIN ➔ Receiver sends ACK.</li>
+                <li>Receiver sends FIN ➔ Initiator sends ACK.</li>
+            </ul>
+
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: The "TIME_WAIT" State</strong>
+                "After sending the final ACK, the port goes into a specific timeout period. If you immediately close the port and open a new connection, an old packet from the previous connection (delayed in a slow router) might suddenly arrive. The timeout lets all these ghost packets 'die' before the port is reused."
+            </div>
+        </article>
+
+        <!-- Section 8 -->
+        <article class="card">
+            <h2>8. User Datagram Protocol (UDP)</h2>
+            <p>UDP is the total opposite of TCP. One node indiscriminately starts sending data to another node without <em>any</em> consideration for flow control, dropped packets, ordering, error detection, or congestion control.</p>
+            
+            <div class="emoji-art">
+                💻 💨 🔫🤬
+            </div>
+            
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: The Scarface Analogy</strong>
+                "The presentation uses a picture of Scarface firing a machine gun. This is a perfect analogy. UDP is the 'rat-a-tat-tat' protocol. No handshakes, no checking if the receiver is ready, no caring if the network is full. It just blasts packets at the destination. If they arrive out of order, or don't arrive at all, UDP does not care."
+            </div>
+        </article>
+
+        <!-- Section 9 -->
+        <article class="card">
+            <h2>9. TCP vs. UDP: Comparison & Use Cases</h2>
+            
+            <div class="comparison-grid">
+                <div class="comp-card udp">
+                    <h3 style="color: var(--accent-red); margin-top: 0;">UDP (User Datagram Protocol)</h3>
+                    <ul>
+                        <li>⚡ <strong>Speed:</strong> Much faster (no handshakes or ACKs).</li>
+                        <li>📉 <strong>Reliability:</strong> None. Packets drop and arrive out of order.</li>
+                        <li>🛑 <strong>Protections:</strong> None. Can overwhelm receivers/network.</li>
+                        <li>🎯 <strong>Best For:</strong> Real-time apps where absolute speed matters and dropped data is acceptable.</li>
+                        <li><strong>Use Cases:</strong> Video chatting (Zoom), Live Multiplayer Gaming, DNS requests, Live Stock Tickers.</li>
+                    </ul>
+                </div>
+
+                <div class="comp-card tcp">
+                    <h3 style="color: var(--accent-blue); margin-top: 0;">TCP (Transmission Control Protocol)</h3>
+                    <ul>
+                        <li>🐢 <strong>Speed:</strong> Slower (overhead for setup and ACKs).</li>
+                        <li>📈 <strong>Reliability:</strong> High. Guarantees delivery and exact ordering.</li>
+                        <li>🛡️ <strong>Protections:</strong> Flow Control and Congestion Control.</li>
+                        <li>🎯 <strong>Best For:</strong> Accuracy-focused apps where every single byte of data must be present.</li>
+                        <li><strong>Use Cases:</strong> REST APIs, Web Browsing (HTTP/HTTPS), File transfers, Emails, Banking apps.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="teacher-note">
+                <strong>🎤 Instructor's Insight: Video Chat vs. Banking</strong>
+                "Why UDP for Video Chat? If a frame of video gets delayed, by the time it arrives, the conversation has moved on. It's better to drop the frame (a quick screen glitch) than pause the whole call waiting for TCP to resend it.<br><br>
+                Why TCP for Web/Banking? If you load a bank balance, you cannot afford to drop digits or have packets arrive out of order. Accuracy is paramount over latency."
+            </div>
+        </article>
+
+        <!-- Section 10 -->
+        <article class="card" style="border-bottom: 4px solid var(--accent-green);">
+            <h2>10. Conclusion & System Design</h2>
+            <p>As a modern software engineer, you likely won't program TCP/UDP handshakes directly (the OS handles this). However, knowing the difference is crucial for high-level system architecture.</p>
+            <p><strong>The Golden Rule:</strong> TCP is the industry standard default. Trying to program reliable transmission, flow control, and congestion control into your own application code from scratch is a nightmare. But, understanding <em>when</em> to strip away TCP's guarantees to get the raw, low-latency speed of UDP is a hallmark of excellent system design.</p>
+        </article>
+
+    </main>
+
+</body>
+</html>

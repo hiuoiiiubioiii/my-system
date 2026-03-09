@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Single Leader Replication</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-hover: #2a2a2a;
+            --primary: #bb86fc;
+            --secondary: #03dac6;
+            --error: #cf6679;
+            --text-main: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            --max-width: 800px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Reading Progress Bar */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease;
+        }
+
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-top: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Feed Cards / Sections */
+        .feed-section {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .feed-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        h2 {
+            color: #ffffff;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--surface-hover);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: var(--secondary);
+            margin: 25px 0 10px 0;
+            font-size: 1.3rem;
+        }
+
+        p {
+            margin-bottom: 15px;
+            font-size: 1.05rem;
+        }
+
+        ul {
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Instructor Notes / Analogies */
+        .instructor-note {
+            background-color: rgba(187, 134, 252, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+        }
+
+        .instructor-note strong {
+            color: var(--primary);
+            font-style: normal;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Visualizations */
+        .visualization-box {
+            background-color: #000;
+            border: 1px solid var(--surface-hover);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: monospace;
+        }
+
+        /* Architecture Diagram */
+        .arch-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            width: 100%;
+        }
+
+        .node-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            width: 100%;
+        }
+
+        .node {
+            background-color: #333;
+            border-radius: 8px;
+            padding: 15px 25px;
+            text-align: center;
+            border: 2px solid var(--text-muted);
+            position: relative;
+        }
+
+        .node.master { border-color: var(--primary); font-weight: bold;}
+        .node.client { border-color: var(--secondary); background-color: #112222; }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        .legend span { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.write { background-color: var(--error); }
+        .dot.read { background-color: var(--secondary); }
+        .dot.repl { background-color: var(--primary); }
+
+        /* Chat Visualizations */
+        .chat-container {
+            width: 100%;
+            max-width: 500px;
+            background: #222;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .chat-msg {
+            background: #333;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-family: var(--font-family);
+            font-size: 0.95rem;
+        }
+        .chat-msg span { color: var(--text-muted); font-size: 0.8rem; display: block; margin-bottom: 3px;}
+        .missing-msg {
+            background: rgba(207, 102, 121, 0.1);
+            border: 1px dashed var(--error);
+            color: var(--error);
+        }
+
+        /* Tag Pill */
+        .tag {
+            display: inline-block;
+            background: var(--surface-hover);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            margin-right: 5px;
+            color: var(--secondary);
+        }
+        
+        .highlight-bad { color: var(--error); font-weight: bold; }
+        .highlight-good { color: var(--secondary); font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+    <div id="progress-bar"></div>
+
+    <div class="container">
+        <header>
+            <h1>Single Leader Replication</h1>
+            <p>Comprehensive System Design Notes & Visualizations</p>
+        </header>
+
+        <!-- Context Section -->
+        <div class="feed-section">
+            <h2>Course Introduction & Context</h2>
+            <p>Before diving into the technical material, the instructor noted that comparing "SQL vs. NoSQL" directly is an oversimplification. Modern databases have 8 to 10 popular variants, each with unique benefits and drawbacks tied to their replication methods, partitioning, and storage engines (like B-Trees vs LSTM trees).</p>
+            <p>To truly understand how to choose a database, we must first build foundational knowledge. <strong>This lecture is step one: Understanding Replication.</strong></p>
+            <div class="instructor-note">
+                <strong>🎙 Instructor's Anecdote</strong>
+                The instructor happily mentioned his first video got 1 view, which is a "dub" (win) because it means his friends won't find the channel and make fun of him. He also noted his new haircut is looking "hella cute."
+            </div>
+        </div>
+
+        <!-- Section 1 -->
+        <div class="feed-section">
+            <h2>1. What is Replication?</h2>
+            <p>Replication is the process of having redundant copies of a database.</p>
+            <ul>
+                <li><strong>Fault Tolerance:</strong> The application does not fail in the event of a crash. If one goes down, another takes over.</li>
+                <li><strong>Scalability:</strong> Reduces the load on each database serving requests.</li>
+            </ul>
+            <div class="instructor-note">
+                <strong>🎙 Analogy: Cloning Yourself</strong>
+                "If I have a heavy load from school homework, and a heavy load from working out at the gym, making a clone of myself would allow me to spread that work out. Similarly, spreading requests across multiple databases stops one machine from getting overwhelmed."
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="feed-section">
+            <h2>2. Single Leader Architecture</h2>
+            <p>There are three main types of replication: <span class="tag">Single Leader</span> <span class="tag">Multi Leader</span> <span class="tag">Leaderless</span>. This lecture focuses exclusively on <strong>Single Leader</strong>.</p>
+            <ul>
+                <li><strong>All writes</strong> go to one Master database.</li>
+                <li>The Master sends a list of writes to other databases via a <strong>Replication Log</strong>.</li>
+                <li><strong>Reads</strong> can come from ANY database (Master or Slaves).</li>
+            </ul>
+
+            <div class="visualization-box">
+                <div class="arch-diagram">
+                    <div class="node client">Web Server (Client)</div>
+                    <div style="color: var(--text-muted);">⬇ Data Traffic ⬇</div>
+                    <div class="node-row">
+                        <div class="node master">Master DB<br><small>(Accepts Writes & Reads)</small></div>
+                    </div>
+                    <div style="color: var(--primary);">↙ Replication Logs ↘</div>
+                    <div class="node-row">
+                        <div class="node">Slave 1 DB<br><small>(Reads Only)</small></div>
+                        <div class="node">Slave 2 DB<br><small>(Reads Only)</small></div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <span><div class="dot write"></div> Writes: Client to Master only</span>
+                    <span><div class="dot repl"></div> Sync: Master to Slaves</span>
+                    <span><div class="dot read"></div> Reads: Client from Master OR Slaves</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="feed-section">
+            <h2>3. Increasing Availability & Handling Crashes</h2>
+            <p>How do we keep the system running smoothly when adding machines or dealing with infrastructure failures?</p>
+            
+            <h3>A. Adding a New Follower (Without Downtime)</h3>
+            <p>You can't just copy data while the database is live because data is constantly changing.</p>
+            <ol>
+                <li>Take a consistent <strong>snapshot</strong> of the leader database at a specific point in time.</li>
+                <li>Note the exact index/position in the replication log associated with that snapshot.</li>
+                <li>The new follower downloads the snapshot, then asks the leader for all changes that occurred <em>after</em> that specific index.</li>
+            </ol>
+
+            <h3>B. Dealing with a Follower Crash</h3>
+            <p>Followers write to durable storage (hard drives). At the time of a crash, the follower knows exactly where it was in the replication log.</p>
+            <ol>
+                <li>On reboot, the follower fetches all new changes from the leader node.</li>
+                <li>It starts implementing changes from the exact index where it previously failed to catch up.</li>
+            </ol>
+
+            <h3>C. Dealing with a Leader Crash (Failover)</h3>
+            <p>When the Leader dies, the system must perform a <strong>Failover</strong> to promote a Follower to the new Leader.</p>
+            <ol>
+                <li>Determine a new leader via consensus (usually the replica that is the most up-to-date).</li>
+                <li>Configure all clients to send writes to the new leader.</li>
+                <li>Configure all other followers to pull replication logs from the new leader.</li>
+            </ol>
+            
+            <div class="instructor-note" style="border-left-color: var(--error);">
+                <strong style="color: var(--error);">⚠️ Problems with Failover</strong>
+                <ul>
+                    <li><strong>Lost Data:</strong> Writes from the old leader might not have propagated to replicas before the crash.</li>
+                    <li><strong>Accidental Failovers:</strong> Network congestion can make a healthy leader look dead. Forcing a failover consumes heavy resources, making the network congestion even worse.</li>
+                    <li><strong>Split Brain:</strong> If the old leader comes back online, it might still think it's the leader. If two databases accept writes simultaneously, data becomes severely corrupted.</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="feed-section">
+            <h2>4. Synchronous vs. Asynchronous Replication</h2>
+            
+            <h3>Synchronous</h3>
+            <ul>
+                <li>The client does <strong>not</strong> receive a success message until ALL replicas complete the write.</li>
+                <li><strong>Tradeoff:</strong> Provides <em>Strong Consistency</em> (data is always exactly up to date everywhere), but writes take a long time due to global network transport times.</li>
+            </ul>
+
+            <h3>Asynchronous</h3>
+            <ul>
+                <li>The client receives a success message the exact second the Master completes the write. Master updates replicas in the background.</li>
+                <li><strong>Tradeoff:</strong> Writes are much faster, but results in <em>Eventual Consistency</em>. Clients might make "stale" reads if they hit a lagging replica.</li>
+            </ul>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="feed-section">
+            <h2>5. Eventual Consistency Anomalies</h2>
+            <p>While Eventual Consistency is fast, it creates three specific, frustrating scenarios for user experience. Here is how to fix them.</p>
+
+            <h3>Anomaly 1: Reading Your Own Writes</h3>
+            <p><strong>The Problem:</strong> You make a change, read from a lagging replica, and don't see your change. It looks like the save failed.</p>
+            <div class="instructor-note">
+                <strong>🎙 Analogy</strong>
+                "You update your Facebook profile to say you are 6'0" instead of 5'11" to impress people. You hit save, the page reloads from a replica, and it still says 5'11". You get angry."
+            </div>
+            <p><strong>The Solutions:</strong></p>
+            <ul>
+                <li>Always route reads from the user directly to the Leader for areas of the app they can edit themselves (like their own profile).</li>
+                <li>Always read from the Leader (or a confirmed up-to-date replica) for a set timer (e.g., 30 seconds) immediately after the client makes a write.</li>
+            </ul>
+
+            <h3>Anomaly 2: Monotonic Reads (Time Traveling)</h3>
+            <p><strong>The Problem:</strong> Reads look like they are going backward in time because subsequent refreshes hit different replicas.</p>
+            <div class="visualization-box">
+                <div style="text-align:left; width: 100%; max-width: 500px;">
+                    <strong>Refresh 1 (Hits Replica A - Up to date)</strong>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-msg"><span>1:05</span>Kate: What's up</div>
+                    <div class="chat-msg"><span>1:10</span>Jordan: Not much playing video games</div>
+                    <div class="chat-msg"><span>1:15</span>Kate: Wanna come over?</div>
+                </div>
+                <br>
+                <div style="text-align:left; width: 100%; max-width: 500px;">
+                    <strong>Refresh 2 (Hits Replica B - Lagging behind)</strong>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-msg"><span>1:05</span>Kate: What's up</div>
+                    <div class="chat-msg"><span>1:10</span>Jordan: Not much playing video games</div>
+                    <div class="chat-msg missing-msg">Message from 1:15 suddenly disappears!</div>
+                </div>
+            </div>
+            <p><strong>The Solution:</strong> Fix this by having each user read from the <em>same</em> replica every time (e.g., hash the User ID and map it to a specific replica).</p>
+
+            <h3>Anomaly 3: Consistent Prefix Reads (Causality Lost)</h3>
+            <p><strong>The Problem:</strong> The causal relationship between writes is lost because a preceding write takes longer to replicate than the response (usually due to database partitioning/sharding). Replies appear before the original message.</p>
+            
+            <div class="visualization-box">
+                <div style="text-align:left; width: 100%; max-width: 500px;">
+                    <strong>User C views the feed (Hits lagging Partition 1, fast Partition 2)</strong>
+                </div>
+                <div class="chat-container">
+                    <div class="chat-msg missing-msg">6:22 - (Person A) Oh no the Knicks blew another game. [DELAYED IN NETWORK]</div>
+                    <div class="chat-msg"><span>6:25</span>Person B: Screw me!!</div>
+                    <div class="chat-msg"><span>6:27</span>Person C: On my way!</div>
+                </div>
+                <p style="margin-top: 10px; color: var(--text-muted); font-size: 0.9rem;">*Person C sees the reply out of context because the original message is stuck on a slower partition.*</p>
+            </div>
+
+            <p><strong>The Solution:</strong></p>
+            <ul>
+                <li>Put causally related events on the same exact partition.</li>
+                <li>If not possible, keep track of causal dependencies (give the reply an ID pointing to the original message, so the database knows to hold it until the original arrives).</li>
+            </ul>
+        </div>
+
+        <!-- Section 6 -->
+        <div class="feed-section">
+            <h2>6. Replication Log Implementation Options</h2>
+            <p>How do we actually format the data sent from the Master to the Slaves? We have three options:</p>
+
+            <ul>
+                <li>
+                    <span class="highlight-bad">1. Copy over SQL statements (Bad)</span><br>
+                    SQL statements are nondeterministic. If a query uses <code>NOW()</code> to get the current time, the Master and the Follower will execute it at different exact milliseconds, resulting in mismatched data.
+                </li>
+                <br>
+                <li>
+                    <span class="highlight-bad">2. Use Internal Write Ahead Log (WAL) (Bad)</span><br>
+                    This tells the disk exactly which literal bytes changed. It is not scalable if you change database engines (e.g., MySQL to Postgres). Different engines store data in different locations on disk, so byte-level instructions will break the replicas.
+                </li>
+                <br>
+                <li>
+                    <span class="highlight-good">3. Use Logical Log (Best)</span><br>
+                    Describes exactly which rows were modified (by Primary Key) and how. It is decoupled from the storage engine, allowing for future-proofing if the underlying database engine changes in the future.
+                </li>
+            </ul>
+        </div>
+
+        <!-- Section 7 -->
+        <div class="feed-section">
+            <h2>7. Conclusion & Tradeoffs</h2>
+            
+            <h3>Pros:</h3>
+            <p>All writes go through one single machine. This ensures consistency across replicas and eliminates data conflicts (you have one definitive source of truth).</p>
+
+            <h3>Cons:</h3>
+            <p>Since all writes have to go through one machine, <strong>write throughput may not be acceptable</strong> at scale. The leader becomes a bottleneck.</p>
+
+            <div class="instructor-note">
+                <strong>⏭ Next Steps in System Design</strong>
+                To solve the write bottleneck of Single Leader replication, we either need to <strong>partition (shard)</strong> the dataset and have a single leader per partition, or look toward other replication strategies (Multi-Leader or Leaderless), which will be covered in upcoming materials.
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Reading Progress Bar
+        window.onscroll = function() {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        };
+
+        // Scroll Animation Observer for Feed Layout
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15
+        };
+
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    // Optional: unobserve if you only want the animation to happen once
+                    // observer.unobserve(entry.target); 
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feed-section').forEach(section => {
+            observer.observe(section);
+        });
+        
+        // Trigger visible immediately for the first section so screen isn't empty on load
+        setTimeout(() => {
+            const firstSection = document.querySelector('.feed-section');
+            if(firstSection) firstSection.classList.add('visible');
+        }, 100);
+    </script>
+</body>
+</html>

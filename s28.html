@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Series Databases | Study Notes</title>
+    <style>
+        /* --- CORE STYLES & TYPOGRAPHY --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;600&display=swap');
+
+        :root {
+            --bg-color: #f4f7fa;
+            --text-main: #334155;
+            --text-muted: #64748b;
+            --primary: #2563eb;
+            --secondary: #f59e0b;
+            --card-bg: #ffffff;
+            --insight-bg: #eff6ff;
+            --insight-border: #bfdbfe;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.7;
+            padding: 20px;
+        }
+
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            padding-bottom: 80px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            text-align: center;
+            padding: 40px 0 20px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #0f172a;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* --- CARDS & CONTENT BLOCKS --- */
+        .topic-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border-top: 4px solid var(--primary);
+            transition: transform 0.2s ease;
+        }
+
+        .topic-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .topic-title {
+            font-size: 1.75rem;
+            color: #0f172a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slide-content {
+            background: #f8fafc;
+            border-left: 4px solid #cbd5e1;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+            color: #475569;
+        }
+
+        .slide-content h4 {
+            margin-bottom: 10px;
+            color: #334155;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* --- INSTRUCTOR INSIGHTS --- */
+        .insight-block {
+            background: var(--insight-bg);
+            border: 1px solid var(--insight-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .insight-title {
+            color: var(--primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .highlight {
+            background: #fef08a;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #854d0e;
+        }
+
+        /* --- VISUALIZATIONS --- */
+        .viz-container {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: white;
+            font-family: 'Fira Code', monospace;
+        }
+
+        .viz-label {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Viz 1: Append Only Flow */
+        .stream-box {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .data-packet {
+            background: var(--primary);
+            padding: 10px;
+            border-radius: 6px;
+            animation: slideInRight 2s infinite linear;
+            opacity: 0;
+        }
+        .data-packet:nth-child(2) { animation-delay: 0.5s; }
+        .data-packet:nth-child(3) { animation-delay: 1s; }
+        .data-packet:nth-child(4) { animation-delay: 1.5s; }
+        
+        @keyframes slideInRight {
+            0% { transform: translateX(100px); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateX(-100px); opacity: 0; }
+        }
+
+        /* Viz 2: Column vs Row */
+        .grid-compare {
+            display: flex;
+            gap: 40px;
+            width: 100%;
+            justify-content: center;
+        }
+        .db-table {
+            display: grid;
+            gap: 4px;
+            background: #334155;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .db-row { display: contents; }
+        .db-cell {
+            background: #475569;
+            padding: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        /* Highlight Column */
+        .highlight-col .col-2 {
+            background: var(--secondary);
+            color: #000;
+            font-weight: bold;
+            animation: pulseBg 2s infinite;
+        }
+        @keyframes pulseBg {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Viz 3: Hypertable to Chunks */
+        .chunking-viz {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .hypertable {
+            display: grid;
+            grid-template-columns: repeat(4, 25px);
+            grid-template-rows: repeat(4, 25px);
+            gap: 2px;
+            background: #ea580c;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        .hyper-cell { background: #fdba74; }
+        .arrow { font-size: 2rem; color: #94a3b8; }
+        .chunks-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .chunk {
+            border: 2px dashed #94a3b8;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.75rem;
+            background: #0f172a;
+            position: relative;
+        }
+        .chunk.active-ram {
+            border-color: var(--success);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        }
+        .ram-badge {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: var(--success);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 0.6rem;
+        }
+
+        /* Viz 4: Deletes */
+        .delete-viz {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            width: 100%;
+        }
+        .lsm-delete, .chunk-delete {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .lsm-row {
+            background: #475569;
+            padding: 8px 20px;
+            border-radius: 4px;
+            position: relative;
+        }
+        .tombstone::after {
+            content: '❌ Tombstone';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(239, 68, 68, 0.8);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.7rem;
+        }
+        .chunk-to-drop {
+            background: #475569;
+            width: 100px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 2px dashed #94a3b8;
+            animation: dropFile 4s infinite;
+        }
+        @keyframes dropFile {
+            0%, 20% { transform: scale(1); opacity: 1; }
+            40%, 60% { transform: scale(0); opacity: 0; }
+            80%, 100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .grid-compare, .chunking-viz, .delete-viz {
+                flex-direction: column;
+                align-items: center;
+            }
+            .arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Time Series Databases</h1>
+        <p>Complete Architecture & System Design Notes</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- INTRO & PREMISE -->
+        <article class="topic-card">
+            <h2 class="topic-title">🎬 Introduction & Core Premise</h2>
+            <div class="insight-block">
+                <div class="insight-title">🧠 Instructor's Premise</div>
+                <p>The goal of this lecture is not to teach you how to use a specific database like TimescaleDB or InfluxDB. Instead, it focuses on the <span class="highlight">abstract design principles and architecture</span> that all time-series databases share. This is highly useful for system design interviews, where you are expected to understand the *concepts* rather than specific software implementations.</p>
+            </div>
+        </article>
+
+        <!-- 1. BACKGROUND -->
+        <article class="topic-card">
+            <h2 class="topic-title">1. Background</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <ul>
+                    <li>In many applications, there is a pattern of “write-once, read many times” data inserts corresponding to a range of time - things like logs, sensors, or any other consistent data being ingested from a stream follows this rule.</li>
+                    <li>As a result, many databases specifically tailored for this use case, such as InfluxDB, TimescaleDB, and Apache Druid have been created. They allow both great throughput for reads and writes on time series data.</li>
+                </ul>
+            </div>
+            <div class="insight-block">
+                <div class="insight-title">🧠 Instructor's Insights</div>
+                <ul>
+                    <li><strong>The Universality of Time-Series Data:</strong> Almost every modern company will eventually have to store time-series data. This usually takes the form of <strong>server logs</strong> or <strong>sensor telemetry</strong>.</li>
+                    <li><strong>The Problem with Traditional DBs:</strong> Time-series data arrives as a continuous, massive stream. Traditional relational databases aren't optimized for this specific "firehose" ingestion.</li>
+                    <li><strong>The Solution:</strong> Specialized databases were built specifically to handle incredibly high write/read throughput specifically for ordered time data.</li>
+                </ul>
+            </div>
+        </article>
+
+        <!-- 2. OPERATIONS -->
+        <article class="topic-card">
+            <h2 class="topic-title">2. Time Series Operations</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Access Patterns</h4>
+                <ul>
+                    <li><strong>Writes:</strong> Primarily inserts to a recent time interval, adjacent values likely similar.</li>
+                    <li><strong>Reads:</strong> Generally from the same timestamp/data source combo over <em>one column</em> of data. Usually looking at the most recent time interval.</li>
+                    <li><strong>Deletes:</strong> Common scenario is bulk deletion of data older than a specific date prior to the present.</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-label">Visualization: Append-Only Write Stream</div>
+                <div class="stream-box">
+                    <span>Source</span>
+                    <div class="data-packet">Timestamp | Value</div>
+                    <div class="data-packet">Timestamp | Value</div>
+                    <div class="data-packet">Timestamp | Value</div>
+                    <span>Database</span>
+                </div>
+            </div>
+
+            <div class="insight-block">
+                <div class="insight-title">🧠 Designing around Access Patterns</div>
+                <p>To design a good system, you must design around how the data is actually accessed:</p>
+                <ul>
+                    <li><strong>Write Patterns:</strong> You are writing to the <em>end</em> of the timeline. You aren't inserting data from 7 days ago; you are inserting data from <em>right now</em>. We never update this data; we just <span class="highlight">"write once."</span></li>
+                    <li><strong>Read Patterns:</strong> Users usually want to see a specific metric (one column) from a specific source, over a recent timeframe (e.g., "Show me Server A's CPU usage over the last 3 hours").</li>
+                    <li><strong>Delete Patterns:</strong> People don't keep log data forever. The standard practice is <strong>bulk deletion</strong> based on a threshold (e.g., "Delete everything older than 6 months").</li>
+                </ul>
+            </div>
+        </article>
+
+        <!-- 3. OPTIMIZING WRITES -->
+        <article class="topic-card">
+            <h2 class="topic-title">3. Optimizing Writes</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <ul>
+                    <li>Should likely build a compound index first sorted on source ID, and then within that sorted on timestamp.</li>
+                    <li>This allows writes from the same data source over similar intervals of time to be on the same node.</li>
+                </ul>
+            </div>
+            <div class="insight-block">
+                <div class="insight-title">🧠 Instructor's Insights</div>
+                <p><strong>Compound Indexing & Sharding:</strong> The most natural way to organize this data is a tuple: <code>(Data Source ID, Timestamp)</code>. If you build your database using this compound index, it guarantees that data coming from the same source at roughly the same time will be grouped together. If you are sharding across multiple servers, this ensures <span class="highlight">high-speed localized writes</span>, rather than scattering a single sensor's data across a dozen different machines.</p>
+            </div>
+        </article>
+
+        <!-- 4. OPTIMIZING READS -->
+        <article class="topic-card">
+            <h2 class="topic-title">4. Optimizing Reads (Columnar Storage)</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <ul>
+                    <li>Storing data in a column-oriented manner is much faster.</li>
+                    <li>Timestamps and metrics are sequential/similar and can be compressed a ton.</li>
+                    <li>Having all column values in one file reduces disk I/O and allows faster aggregations (we generally only need 1 or 2 columns at a time for graphing).</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-label">Visualization: Reading One Metric (Columnar Advantage)</div>
+                <div class="grid-compare">
+                    <div>
+                        <p style="text-align:center; font-size:0.8rem; margin-bottom:5px;">Row DB (Pulls entire rows)</p>
+                        <div class="db-table">
+                            <div class="db-row"><div class="db-cell">Time</div><div class="db-cell">CPU</div><div class="db-cell">RAM</div></div>
+                            <div class="db-row"><div class="db-cell">10:01</div><div class="db-cell">45%</div><div class="db-cell">2GB</div></div>
+                            <div class="db-row"><div class="db-cell">10:02</div><div class="db-cell">46%</div><div class="db-cell">2GB</div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <p style="text-align:center; font-size:0.8rem; margin-bottom:5px;">Column DB (Pulls only what's needed)</p>
+                        <div class="db-table highlight-col">
+                            <div class="db-row"><div class="db-cell col-1">Time</div><div class="db-cell col-2">CPU</div><div class="db-cell col-3">RAM</div></div>
+                            <div class="db-row"><div class="db-cell col-1">10:01</div><div class="db-cell col-2">45%</div><div class="db-cell col-3">2GB</div></div>
+                            <div class="db-row"><div class="db-cell col-1">10:02</div><div class="db-cell col-2">46%</div><div class="db-cell col-3">2GB</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-block">
+                <div class="insight-title">🧠 Instructor's Insights</div>
+                <ul>
+                    <li><strong>Why Column-Oriented?</strong> Standard databases store data in rows. But users usually only want to graph <em>one specific metric</em> at a time. If stored in columns, the DB only pulls that specific column from the disk, drastically reducing Disk I/O.</li>
+                    <li><strong>Massive Compression:</strong> Because adjacent data points are highly similar (e.g., timestamps change by 1 second, temperature stays at 72.1° for hours), this data is highly compressible (e.g., Run-Length Encoding). This shrinks the data footprint immensely.</li>
+                </ul>
+            </div>
+        </article>
+
+        <!-- 5. CHUNKING (CORE CONCEPT) -->
+        <article class="topic-card">
+            <h2 class="topic-title">5. The "Chunking" Concept</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <ul>
+                    <li>Even within one node, it is better to treat each <code>(source, time interval)</code> tuple as its own chunk table (abstract these away via a large "Hypertable").</li>
+                    <li>Since most writes go to only a couple of these, we achieve much better performance by <strong>caching their entire index in memory</strong>.</li>
+                    <li>Otherwise we would have many index pages occasionally swapped in and out of memory, incurring processing overhead.</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-label">Visualization: Hypertable breaking into Chunks</div>
+                <div class="chunking-viz">
+                    <div style="text-align: center;">
+                        <p style="font-size:0.8rem; margin-bottom:5px;">Massive "Hypertable"</p>
+                        <div class="hypertable">
+                            <!-- Generate a 4x4 grid of divs -->
+                            <div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div>
+                            <div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div>
+                            <div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div>
+                            <div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div><div class="hyper-cell"></div>
+                        </div>
+                    </div>
+                    <div class="arrow">➔</div>
+                    <div class="chunks-grid">
+                        <div class="chunk">Old File<br>Sensor 1<br>Jan 1</div>
+                        <div class="chunk">Old File<br>Sensor 2<br>Jan 1</div>
+                        <div class="chunk active-ram"><span class="ram-badge">In RAM</span>Recent File<br>Sensor 1<br>Today</div>
+                        <div class="chunk active-ram"><span class="ram-badge">In RAM</span>Recent File<br>Sensor 2<br>Today</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-block">
+                <div class="insight-title">🧠 The Memory/RAM Trick</div>
+                <p>This is the most important architectural concept:</p>
+                <ul>
+                    <li><strong>The Problem with Giant Tables:</strong> If you put all time-series data into one massive table, the B-Tree index becomes so large it can no longer fit in the server's RAM. The computer has to constantly swap index pages between the slow Hard Drive and fast RAM (disk-swapping/thrashing), creating massive lag.</li>
+                    <li><strong>The "Chunk" Solution:</strong> Time-Series DBs fix this by breaking the giant conceptual table into many tiny, physical "Chunk tables" defined by source and time block (e.g., "Sensor A, Jan 1st").</li>
+                    <li>Because 99% of reads and writes happen on <em>recent</em> data, <span class="highlight">the DB only needs to keep the indexes for the recent chunks in RAM</span>. The older chunks' indexes stay safely on the hard drive. This eliminates disk-swapping.</li>
+                </ul>
+            </div>
+        </article>
+
+        <!-- 6. OPTIMIZING DELETES -->
+        <article class="topic-card">
+            <h2 class="topic-title">6. Optimizing Deletes</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <ul>
+                    <li>Breaking the main table into chunk tables greatly optimizes delete performance.</li>
+                    <li>In LSM trees, a delete is a write (adds a tombstone) and requires waiting for compaction. In B-trees, you must traverse the tree to set pointers to null.</li>
+                    <li>Instead, to delete a bunch of old data all at once, we can <strong>just delete the corresponding chunk files/indexes</strong>.</li>
+                </ul>
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-label">Visualization: Traditional vs Chunk Deletes</div>
+                <div class="delete-viz">
+                    <div class="lsm-delete">
+                        <p style="font-size:0.8rem;">Standard DB (Slow traversal)</p>
+                        <div class="lsm-row tombstone">Data Row 1</div>
+                        <div class="lsm-row tombstone">Data Row 2</div>
+                        <div class="lsm-row tombstone">Data Row 3</div>
+                    </div>
+                    <div class="chunk-delete">
+                        <p style="font-size:0.8rem;">TSDB (Instant OS File Drop)</p>
+                        <div class="chunk-to-drop">
+                            Chunk File<br>(6 months old)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-block">
+                <div class="insight-title">🧠 Instant Deletion</div>
+                <p><strong>Why normal deletes are slow:</strong> Deleting a million old rows requires a million individual operations (writing tombstones or nullifying pointers).</p>
+                <p><strong>Why Chunking makes deletes instant:</strong> Because our old data is already organized into neat, isolated files based on time intervals, we completely bypass traditional DB delete mechanisms. The DB simply asks the operating system to <span class="highlight">delete the entire chunk file</span>. It's a single, nearly instantaneous operation with zero database overhead.</p>
+            </div>
+        </article>
+
+        <!-- 7. CONCLUSION -->
+        <article class="topic-card">
+            <h2 class="topic-title">7. Conclusion & Interview Summary</h2>
+            <div class="slide-content">
+                <h4>👁️‍🗨️ Slide Notes</h4>
+                <p>Using a database specifically made for time series allows huge gains in performance by:</p>
+                <ul>
+                    <li>Creating separate indexes for each data source and time interval combination.</li>
+                    <li>Using Column-oriented storage for fast aggregations and compression.</li>
+                </ul>
+            </div>
+            <div class="insight-block" style="border-color: var(--success); background: #f0fdf4;">
+                <div class="insight-title" style="color: var(--success);">🎯 Interview Cheat Sheet</div>
+                <p>If you get a system design interview question about dealing with logs, telemetry, or metrics, bring up these specific concepts to impress the interviewer:</p>
+                <ol>
+                    <li><strong>Acknowledge the access pattern:</strong> High write volume, appending to the end, querying recent single metrics, bulk dropping old data.</li>
+                    <li><strong>Suggest Columnar Storage:</strong> Explain how it reduces storage size via compression and speeds up single-metric graphing by reducing Disk I/O.</li>
+                    <li><strong>Explain the "Chunking" Architecture:</strong> Detail how breaking the index into time-and-source-based chunks prevents memory bloat, keeps active indexes in RAM, and makes bulk data deletion instantaneous file drops.</li>
+                    <li><strong>Distributed Scaling:</strong> Note that this chunking design scales beautifully, as chunks can easily be hashed and distributed to different nodes.</li>
+                </ol>
+            </div>
+        </article>
+
+    </main>
+
+    <!-- Simple Intersection Observer for scroll fade-in effects -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const cards = document.querySelectorAll('.topic-card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = 1;
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+
+            cards.forEach(card => {
+                card.style.opacity = 0;
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

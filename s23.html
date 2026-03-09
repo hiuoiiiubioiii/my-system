@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRDTs: In-Depth Study Notes</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.2);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --border: #334155;
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        .feed-container {
+            max-width: 800px;
+            width: 100%;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 20px;
+            margin-bottom: 10px;
+        }
+
+        h1 { font-size: 2.5rem; color: var(--text-main); margin-bottom: 10px; }
+        h2 { font-size: 1.8rem; color: var(--accent); margin-bottom: 15px; border-left: 4px solid var(--accent); padding-left: 10px;}
+        h3 { font-size: 1.3rem; margin-bottom: 10px; color: #e2e8f0; }
+        p { margin-bottom: 15px; font-size: 1.05rem; color: #cbd5e1; }
+        ul { margin-bottom: 15px; padding-left: 20px; color: #cbd5e1; }
+        li { margin-bottom: 8px; }
+
+        .card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight-box {
+            background-color: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .highlight-box strong {
+            color: var(--accent);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media(max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        /* Visualization Styles */
+        .viz-container {
+            background-color: #0b1120;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+
+        .db-nodes {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .node {
+            background: var(--surface);
+            padding: 15px;
+            border-radius: 8px;
+            width: 45%;
+            border: 1px solid var(--border);
+        }
+
+        .array-display {
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            margin: 10px 0;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .total-display {
+            font-size: 1.2rem;
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        button {
+            background-color: var(--surface-hover);
+            color: white;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        button:hover { background-color: var(--accent); color: #000; }
+        .btn-sync { background-color: var(--accent); color: #000; width: 100%; font-size: 1.1rem; padding: 12px;}
+        .btn-sync:hover { background-color: #7dd3fc; }
+
+        /* Tag Set Viz Styles */
+        .tag-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .tag-id { color: var(--text-muted); font-size: 0.8rem; }
+        .btn-remove { background: var(--danger); padding: 4px 8px; font-size: 0.8rem; border: none;}
+        .btn-remove:hover { background: #f87171; }
+        input[type="text"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-color);
+            color: white;
+            width: calc(100% - 80px);
+        }
+    </style>
+</head>
+<body>
+
+<main class="feed-container">
+    
+    <header>
+        <h1>CRDTs (Conflict-Free Replicated Data Types)</h1>
+        <p><strong>Course Context:</strong> Moving from wide-column NoSQL (Cassandra/Dynamo) to Key-Value stores (Redis/Riak). Understanding how multi-leader databases handle concurrent write conflicts.</p>
+    </header>
+
+    <section class="card">
+        <h2>1. The Problem: Multi-Leader Conflicts</h2>
+        <p>Modern databases use <strong>multi-leader</strong> or <strong>leaderless</strong> replication to increase <em>write throughput</em>. However, because multiple nodes can accept write requests at the exact same time, data conflicts are mathematically inevitable.</p>
+        
+        <div class="highlight-box">
+            <strong>The Goal = Convergence:</strong><br>
+            CRDTs are data structures designed so that even if replicas get temporarily out of sync due to concurrent writes, once all data is shared (via gossip protocols), <strong>all replicas will eventually show the exact same value without losing any updates.</strong>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>2. Real-World Use Cases</h2>
+        <ul>
+            <li><strong>Collaborative Editing:</strong> Google Docs, Figma (Note: Operational Transform is an alternative algorithm for this).</li>
+            <li><strong>Online Chat Systems:</strong> Ensuring the chronological ordering of chat messages is exact across all users' screens.</li>
+            <li><strong>Offline Editing:</strong> e.g., Calendar apps. Your phone acts as a local node offline. When reconnected, CRDTs merge your offline changes with the cloud without breaking data.</li>
+            <li><strong>Distributed Key-Value Stores:</strong> The core conflict-resolution tech inside Riak and Redis.</li>
+        </ul>
+    </section>
+
+    <section class="card">
+        <h2>3. The Two Types of CRDTs</h2>
+        <p>These two approaches are mathematically equivalent but represent a trade-off in network performance vs. logic complexity.</p>
+        
+        <div class="grid-2">
+            <div>
+                <h3>Operation-Based</h3>
+                <p>Nodes only transmit the <em>action</em> (e.g., "Add 1").</p>
+                <ul>
+                    <li><strong>Pros:</strong> Highly efficient if the state is massive but operations are tiny.</li>
+                    <li><strong>Cons:</strong> <em>Not Idempotent.</em> If a network glitch sends the operation twice, it processes twice.</li>
+                    <li><strong>Requirement:</strong> Network protocols (like TCP) must guarantee exactly-once delivery.</li>
+                </ul>
+            </div>
+            <div>
+                <h3>State-Based</h3>
+                <p>Nodes transmit their <em>entire local state</em> over the network to merge with others.</p>
+                <ul>
+                    <li><strong>Pros:</strong> Works perfectly with background Gossip Protocols.</li>
+                    <li><strong>Cons:</strong> Network-heavy if the data state is large.</li>
+                    <li><strong>Requirements for Merge Function:</strong> Must be <strong>Commutative</strong> (order doesn't matter) and <strong>Idempotent</strong> (repeating the merge changes nothing).</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>4. Visualization: Grow-Only Counter</h2>
+        <p>A State-Based CRDT. Each node holds an array of <code>0</code>s. The length equals the number of nodes. <strong>Node 1 updates Index 0, Node 2 updates Index 1.</strong></p>
+        <p>To merge, nodes use an <strong>Element-wise Maximum</strong>. The total value is the sum of the array.</p>
+        
+        <div class="viz-container">
+            <div class="db-nodes">
+                <div class="node">
+                    <h3>Node 1 (Replica 1)</h3>
+                    <div class="array-display" id="n1-array">[0, 0]</div>
+                    <div class="total-display">Query Total: <span id="n1-total">0</span></div>
+                    <button onclick="incrementNode1()">User A: Increment</button>
+                </div>
+                <div class="node">
+                    <h3>Node 2 (Replica 2)</h3>
+                    <div class="array-display" id="n2-array">[0, 0]</div>
+                    <div class="total-display">Query Total: <span id="n2-total">0</span></div>
+                    <button onclick="incrementNode2()">User B: Increment</button>
+                </div>
+            </div>
+            <button class="btn-sync" onclick="syncNodes()">🔄 Anti-Entropy Sync (Merge Arrays via Max)</button>
+            <p style="margin-top: 15px; font-size: 0.9rem; text-align: center; color: var(--text-muted);" id="sync-status">Nodes are currently in sync.</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>5. Incrementing & Decrementing Counters</h2>
+        <p><strong>The Flaw with Grow-Only:</strong> You cannot use a "decrement" operation on the counter above, because the "Element-wise Max" merge function would just overwrite and ignore the decrements (e.g., max of 5 and 4 is still 5).</p>
+        
+        <div class="highlight-box">
+            <strong>The Solution (Two Arrays):</strong><br>
+            Each node tracks <em>two</em> arrays: one for Increments, one for Decrements.<br><br>
+            <code>Total Value = Sum(Increments Array) - Sum(Decrements Array)</code><br><br>
+            <strong>To Merge:</strong> Do an element-wise max on the Increment arrays, and a separate element-wise max on the Decrement arrays.
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>6. Visualization: Sets & The "Re-add" Problem</h2>
+        <p>Sets work like Inc/Dec counters. You have an <strong>Added Set</strong> and a <strong>Removed Set</strong>. The current contents are <code>Added Set MINUS Removed Set</code>.</p>
+        <p><strong>The Flaw:</strong> If you add "Apple", then remove "Apple", "Apple" goes into the Removed Set. Because merging uses <em>Unions</em>, you can <strong>never re-add "Apple" again</strong>. The math will always subtract it.</p>
+        
+        <div class="highlight-box">
+            <strong>The Solution (Unique Tags):</strong><br>
+            Every time an element is added, attach a unique, random tag to it. To remove it, you put that <em>specific tag</em> into the removed set. If you re-add the item later, it gets a brand new tag!
+        </div>
+
+        <div class="viz-container">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="set-input" placeholder="Enter item (e.g. Apple)">
+                <button style="margin-top:0;" onclick="addToSet()">Add Item</button>
+            </div>
+            
+            <div class="grid-2">
+                <div class="node">
+                    <h3>Active Contents</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">Added Set minus Removed Set</p>
+                    <div id="active-list"></div>
+                </div>
+                <div class="node">
+                    <h3>Under the Hood Sets</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);"><strong>Added Set:</strong></p>
+                    <div id="added-list" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--success);">[]</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);"><strong>Removed Set:</strong></p>
+                    <div id="removed-list" style="font-size: 0.85rem; color: var(--danger);">[]</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card" style="margin-bottom: 50px;">
+        <h2>7. Sequence CRDTs (Briefly)</h2>
+        <p>Used specifically for collaborative text editing. We need to determine the exact chronological order of characters in a document so concurrent typing doesn't turn into gibberish.</p>
+        <p><em>Instructor Note:</em> These algorithms are highly complex (dealing with inserting characters between other characters while maintaining order across multiple networks). They deserve their own dedicated lecture alongside Operational Transform.</p>
+    </section>
+
+</main>
+
+<script>
+    /* =========================================
+       VIZ 1: GROW ONLY COUNTER LOGIC
+       ========================================= */
+    let n1Array = [0, 0];
+    let n2Array = [0, 0];
+
+    function updateCounterDOM() {
+        document.getElementById('n1-array').innerText = `[${n1Array[0]}, ${n1Array[1]}]`;
+        document.getElementById('n2-array').innerText = `[${n2Array[0]}, ${n2Array[1]}]`;
+        
+        let sum1 = n1Array[0] + n1Array[1];
+        let sum2 = n2Array[0] + n2Array[1];
+        
+        document.getElementById('n1-total').innerText = sum1;
+        document.getElementById('n2-total').innerText = sum2;
+
+        const status = document.getElementById('sync-status');
+        if (n1Array[0] !== n2Array[0] || n1Array[1] !== n2Array[1]) {
+            status.innerText = "⚠️ Nodes are out of sync! Different query results.";
+            status.style.color = "var(--danger)";
+        } else {
+            status.innerText = "✅ Nodes are converged and in sync.";
+            status.style.color = "var(--success)";
+        }
+    }
+
+    function incrementNode1() {
+        n1Array[0]++; // Node 1 only updates index 0
+        updateCounterDOM();
+    }
+
+    function incrementNode2() {
+        n2Array[1]++; // Node 2 only updates index 1
+        updateCounterDOM();
+    }
+
+    function syncNodes() {
+        // Element-wise maximum
+        let merged0 = Math.max(n1Array[0], n2Array[0]);
+        let merged1 = Math.max(n1Array[1], n2Array[1]);
+        
+        // Apply to both
+        n1Array = [merged0, merged1];
+        n2Array = [merged0, merged1];
+        
+        updateCounterDOM();
+    }
+
+    /* =========================================
+       VIZ 2: UNIQUE TAG SET LOGIC
+       ========================================= */
+    let addedSet = [];   // Array of objects { item: 'Apple', tag: 'tag_123' }
+    let removedSet = []; // Array of strings ['tag_123']
+
+    function generateTag() {
+        return 'tag_' + Math.random().toString(36).substr(2, 5);
+    }
+
+    function addToSet() {
+        const input = document.getElementById('set-input');
+        const itemName = input.value.trim();
+        if (!itemName) return;
+
+        const newTag = generateTag();
+        addedSet.push({ item: itemName, tag: newTag });
+        
+        input.value = '';
+        updateSetDOM();
+    }
+
+    function removeFromSet(tag) {
+        removedSet.push(tag);
+        updateSetDOM();
+    }
+
+    function updateSetDOM() {
+        // Calculate Active Items: Items in addedSet whose tag is NOT in removedSet
+        const activeItems = addedSet.filter(entry => !removedSet.includes(entry.tag));
+
+        // Render Active List
+        const activeDiv = document.getElementById('active-list');
+        activeDiv.innerHTML = '';
+        if (activeItems.length === 0) activeDiv.innerHTML = '<span style="color: gray;">Empty</span>';
+        
+        activeItems.forEach(entry => {
+            const row = document.createElement('div');
+            row.className = 'tag-row';
+            row.innerHTML = `
+                <span>${entry.item} <span class="tag-id">(${entry.tag})</span></span>
+                <button class="btn-remove" onclick="removeFromSet('${entry.tag}')">Remove</button>
+            `;
+            activeDiv.appendChild(row);
+        });
+
+        // Render Under-the-hood lists
+        document.getElementById('added-list').innerText = JSON.stringify(addedSet.map(e => e.tag));
+        document.getElementById('removed-list').innerText = JSON.stringify(removedSet);
+    }
+
+    // Initialize DOM
+    updateCounterDOM();
+    updateSetDOM();
+
+</script>
+</body>
+</html>

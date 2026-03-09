@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDFS Design - Study Notes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #f4f7f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #555555;
+            --primary: #0066cc;
+            --secondary: #e6f0fa;
+            --accent: #ff9900;
+            --danger: #d9534f;
+            --success: #5cb85c;
+            --border: #e0e6ed;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* Scroll Progress Bar */
+        #progress-container {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 5px;
+            background: #ccc;
+            z-index: 1000;
+        }
+        #progress-bar {
+            height: 5px;
+            background: var(--primary);
+            width: 0%;
+        }
+
+        /* Main Feed Layout */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .feed-container {
+            max-width: 850px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 6px;
+            height: 100%;
+            background-color: var(--primary);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            margin: 25px 0 10px;
+            color: #222;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #856404;
+        }
+
+        .note-box {
+            background-color: var(--secondary);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.95rem;
+        }
+
+        /* --- VISUALIZATIONS CSS --- */
+        .viz-container {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            margin: 25px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .node {
+            background: white;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .node-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .node-title {
+            font-weight: bold;
+            font-size: 0.9rem;
+            color: var(--text-main);
+        }
+
+        .node-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        /* Arrows for Pipeline */
+        .arrow-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .arrow-right {
+            width: 50px;
+            height: 2px;
+            background: var(--text-main);
+            position: relative;
+        }
+        .arrow-right::after {
+            content: '';
+            position: absolute;
+            right: -2px;
+            top: -4px;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid var(--text-main);
+        }
+
+        .arrow-left-dashed {
+            width: 50px;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, var(--success) 0, var(--success) 5px, transparent 5px, transparent 10px);
+            position: relative;
+        }
+        .arrow-left-dashed::before {
+            content: '';
+            position: absolute;
+            left: -2px;
+            top: -4px;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-right: 8px solid var(--success);
+        }
+
+        /* Rack Box */
+        .rack {
+            border: 2px dashed #999;
+            padding: 20px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.02);
+            text-align: center;
+            min-width: 200px;
+        }
+        .rack-title {
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        @media (max-width: 600px) {
+            .arrow-right, .arrow-left-dashed { width: 20px; }
+            .card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Scroll Progress -->
+    <div id="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <header>
+        <h1>Hadoop File System (HDFS) Design</h1>
+        <p>In-Depth Study Notes & Visualizations | Continuous Vertical Feed</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- SECTION 1: Introduction -->
+        <article class="card">
+            <h2>🌍 1. Introduction & Background</h2>
+            <p>Distributed file systems are crucial components of large-scale distributed systems in modern tech companies. HDFS is the most popular open-source distributed file system, originally modeled after the <strong>Google File System (GFS)</strong> paper published over a decade ago.</p>
+            
+            <h3>Why is it so popular?</h3>
+            <ul>
+                <li><strong>Commodity Hardware:</strong> It doesn't require specialized, expensive supercomputers. It can run on normal desktop computers or standard cloud instances (like Amazon EC2).</li>
+                <li><strong>Batch Processing:</strong> It is the enabler for large-scale data processing engines like MapReduce, Spark, and Tez.</li>
+                <li><strong>Database Foundation:</strong> Modern architectures use HDFS as a foundational building block to store vast amounts of data before running heavy computations, creating an extra layer for databases to interact with.</li>
+            </ul>
+            <div class="note-box">
+                <strong>Core Philosophy:</strong> HDFS is designed with computation in mind, opting to move the <em>computation close to the data</em> rather than moving massive amounts of data across the network to the computation.
+            </div>
+        </article>
+
+        <!-- SECTION 2: Architecture Overview -->
+        <article class="card">
+            <h2>🧱 2. Overview of HDFS Architecture</h2>
+            <p>HDFS handles files differently than a standard laptop file system. It is tailored for massive files (Gigabytes to Terabytes).</p>
+            
+            <ul>
+                <li><strong>Write-Once, Read-Many:</strong> HDFS is optimized for writing a file once and then reading it many times. While appending or truncating is possible, modifying data in the middle of a file is not supported.</li>
+                <li><strong>Chunking (Blocks):</strong> Files are split into chunks (usually <span class="highlight">64MB or 128MB</span> per chunk) across multiple DataNodes.</li>
+                <li><strong>Parallelism:</strong> Chunking allows multiple machines to read or write different parts of a massive file simultaneously, turning a sequential bottleneck into a parallelized speedup.</li>
+                <li><strong>Replication:</strong> Chunks are replicated across different nodes to ensure data is never lost if a single machine breaks down.</li>
+            </ul>
+        </article>
+
+        <!-- SECTION 3: The NameNode -->
+        <article class="card">
+            <h2>🧠 3. The NameNode: The Brain of HDFS</h2>
+            <p>The NameNode does not store actual file data. Instead, it stores all the <strong>Metadata</strong> (file names, directories, chunk locations, version numbers).</p>
+
+            <h3>In-Memory Operations</h3>
+            <p>To ensure speed, the NameNode keeps <em>all</em> metadata in RAM. However, RAM is volatile. If the server crashes, RAM is wiped. So, how does it save state?</p>
+            <ul>
+                <li><strong>EditLog (Write-Ahead Log):</strong> All changes to the file system (e.g., creating a file, moving a directory) are immediately written sequentially to the EditLog on disk. Sequential writes to disk are extremely fast.</li>
+                <li><strong>FSImage:</strong> Periodically, the system takes a "snapshot" of the metadata and saves it to disk as an FSImage file.</li>
+                <li><strong>Bootup Process:</strong> On startup, the NameNode loads the last FSImage into memory, and replays any operations found in the EditLog that occurred after that snapshot was taken.</li>
+            </ul>
+
+            <div class="note-box">
+                <strong>Crucial Detail:</strong> The NameNode <em>never</em> saves the physical locations of chunks to the persistent disk. It only stores them in memory.
+            </div>
+
+            <h3>Safe Mode & Block Reports</h3>
+            <p>When the NameNode boots, it enters <strong>Safe Mode</strong>. It doesn't know where any data is! It waits for <strong>Block Reports</strong>. Every DataNode checks in and says, "Here are the chunks I currently hold." The NameNode uses these reports to construct its in-memory map of where data lives.</p>
+            
+            <p>If the NameNode realizes a chunk is under-replicated (e.g., only 2 copies exist instead of the required 3) or if a DataNode dies (stops sending heartbeats), it automatically commands other nodes to replicate that chunk to reach the safety threshold.</p>
+        </article>
+
+        <!-- SECTION 4: Rack Awareness -->
+        <article class="card">
+            <h2>📍 4. "Rack Aware" Replication Strategy</h2>
+            <p>HDFS doesn't just put replicas on random machines. It uses a "Rack Aware" strategy to balance <strong>fault tolerance</strong> with <strong>network bandwidth efficiency</strong>.</p>
+            <p>Standard rule for a Replication Factor of 3:</p>
+            <ul>
+                <li><strong>Replica 1:</strong> On the exact same rack as the writer (makes the initial write very fast).</li>
+                <li><strong>Replica 2 & 3:</strong> On a <em>single, different</em> remote rack.</li>
+            </ul>
+
+            <!-- VISUALIZATION: Rack Awareness -->
+            <div class="viz-container">
+                <div class="rack">
+                    <div class="rack-title">Rack 1 (Local)</div>
+                    <div class="node">
+                        <div class="node-icon">🗄️</div>
+                        <div class="node-title">Replica 1</div>
+                        <div class="node-sub">Writer Node</div>
+                    </div>
+                </div>
+                <div style="font-size: 2rem; color: var(--primary);">➔</div>
+                <div class="rack">
+                    <div class="rack-title">Rack 2 (Remote)</div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="node">
+                            <div class="node-icon">🗄️</div>
+                            <div class="node-title">Replica 2</div>
+                        </div>
+                        <div class="node">
+                            <div class="node-icon">🗄️</div>
+                            <div class="node-title">Replica 3</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="note-box">
+                <strong>Why the same remote rack?</strong> If you put Replica 2 on Rack B and Replica 3 on Rack C, you consume double the cross-network bandwidth. Putting them both on Rack B protects against Rack A losing power, while saving precious network capacity.
+            </div>
+        </article>
+
+        <!-- SECTION 5: Replication Pipelining -->
+        <article class="card">
+            <h2>🔄 5. Replication Pipelining & Consistency Flaws</h2>
+            <p>When writing data, HDFS pipelines the data from one node to the next. A write is only considered successful if <em>all</em> replicas in the pipeline acknowledge it.</p>
+
+            <!-- VISUALIZATION: Pipeline -->
+            <div class="viz-container">
+                <div class="node" style="border-color: #999;">
+                    <div class="node-icon">💻</div>
+                    <div class="node-title">Client</div>
+                </div>
+                
+                <div class="arrow-group">
+                    <div class="arrow-right"></div>
+                    <div class="arrow-left-dashed"></div>
+                </div>
+
+                <div class="node">
+                    <div class="node-icon">🗄️</div>
+                    <div class="node-title">Replica 1</div>
+                </div>
+
+                <div class="arrow-group">
+                    <div class="arrow-right"></div>
+                    <div class="arrow-left-dashed"></div>
+                </div>
+
+                <div class="node">
+                    <div class="node-icon">🗄️</div>
+                    <div class="node-title">Replica 2</div>
+                </div>
+
+                <div class="arrow-group">
+                    <div class="arrow-right"></div>
+                    <div class="arrow-left-dashed"></div>
+                </div>
+
+                <div class="node">
+                    <div class="node-icon">🗄️</div>
+                    <div class="node-title">Replica 3</div>
+                </div>
+            </div>
+            <p style="text-align:center; font-size:0.85rem; color:gray;"><em>Solid black line = Data Write | Dashed green line = Acknowledgment</em></p>
+
+            <h3>The Major Consistency Issue</h3>
+            <p>In theory, waiting for all acknowledgements guarantees strong consistency. However, a major flaw exists:</p>
+            <ul>
+                <li>Imagine Replica 1 successfully writes the data.</li>
+                <li>Before Replica 1 can send it to Replica 2, the network fails.</li>
+                <li>Because the pipeline broke, the Client receives a "Failure" error.</li>
+            </ul>
+            <p><span class="highlight">The Paradox:</span> The client thinks the write failed, but Replica 1 physically holds the new data on its disk. The system is now inconsistent. HDFS expects the client to handle this by retrying the write until a complete success message is returned.</p>
+        </article>
+
+        <!-- SECTION 6: Reads and Writes Flow -->
+        <article class="card">
+            <h2>📖 6. How Reads and Writes Flow</h2>
+            
+            <h3>Hadoop Reads</h3>
+            <ol>
+                <li>Client queries the NameNode for a list of DataNodes carrying a specific chunk.</li>
+                <li>Client determines which DataNode is physically closest (using Rack Awareness) to minimize latency.</li>
+                <li>Client caches this location for future reads.</li>
+                <li>Client reads directly from the chosen DataNode.</li>
+            </ol>
+
+            <h3 style="margin-top: 30px;">Hadoop Writes (Appends)</h3>
+            <ol>
+                <li>Client contacts NameNode to see where chunks are located and to pick a <strong>Primary Replica</strong>.</li>
+                <li>If a current primary exists and its lease is valid, it uses it.</li>
+                <li>If the primary has expired, the NameNode picks a new one—specifically choosing one with the most up-to-date version number. (If none exist, data is lost).</li>
+                <li>All other nodes become secondary. The client pushes the write to the Primary, which pushes it down the replication pipeline.</li>
+            </ol>
+        </article>
+
+        <!-- SECTION 7: High Availability -->
+        <article class="card">
+            <h2>🚨 7. The Single Point of Failure & High Availability</h2>
+            <p>In the original GFS paper and early HDFS architecture, there was only <strong>one</strong> NameNode. If that single server crashed, the entire cluster went blind and stopped working. It was a massive Single Point of Failure (SPOF).</p>
+            <p><strong>The Fix: High Availability (HA) HDFS using ZooKeeper.</strong></p>
+
+            <p>Instead of keeping the persistent EditLog locally on the active NameNode, HDFS utilizes a coordination service called ZooKeeper (specifically forming a Quorum Journal Manager).</p>
+
+            <!-- VISUALIZATION: HA -->
+            <div class="viz-container">
+                <div class="node" style="border-color: var(--success);">
+                    <div class="node-icon">🟢</div>
+                    <div class="node-title">Active NameNode</div>
+                    <div class="node-sub">Holds ZK Lock</div>
+                </div>
+
+                <div class="arrow-group">
+                    <span style="font-size: 0.8rem; color: gray;">Writes to</span>
+                    <div class="arrow-right"></div>
+                </div>
+
+                <div class="node" style="border-color: var(--accent); background: #fffcf5;">
+                    <div class="node-icon">📒</div>
+                    <div class="node-title">ZooKeeper Nodes</div>
+                    <div class="node-sub">(Distributed EditLog)</div>
+                </div>
+
+                <div class="arrow-group">
+                    <span style="font-size: 0.8rem; color: gray;">Reads from</span>
+                    <div style="width: 50px; height: 2px; background: var(--text-main); position: relative;">
+                         <div style="content: ''; position: absolute; left: -2px; top: -4px; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-right: 8px solid var(--text-main);"></div>
+                    </div>
+                </div>
+
+                <div class="node" style="border-color: #999;">
+                    <div class="node-icon">🟡</div>
+                    <div class="node-title">Standby NameNode</div>
+                    <div class="node-sub">Ready to take over</div>
+                </div>
+            </div>
+
+            <p><strong>How Failover Works:</strong></p>
+            <ul>
+                <li>The Active NameNode holds a distributed lock in ZooKeeper and writes all metadata changes to the shared journal.</li>
+                <li>The <strong>Standby NameNode</strong> constantly reads this shared journal, keeping its own RAM state perfectly synced with the Active node.</li>
+                <li>If the Active NameNode crashes, it loses the ZooKeeper lock. The Standby node immediately grabs the lock, promotes itself to Active, and seamlessly takes over because its memory state is already up-to-date!</li>
+            </ul>
+        </article>
+
+        <!-- SECTION 8: Conclusion -->
+        <article class="card" style="border-bottom: 6px solid var(--primary);">
+            <h2>✅ 8. Conclusion</h2>
+            <p>By using a rack-aware replication schema and reads, HDFS provides incredibly high availability and throughput for big data workloads.</p>
+            <p>While the original design was highly susceptible to fault tolerance issues (the SPOF NameNode), implementing ZooKeeper Quorum Journal Managers completely solved this, allowing for instant failovers.</p>
+            <p>Keep in mind that HDFS is not perfect. As seen in the replication pipeline, application code must be prepared to handle retry logic due to potential data consistency issues when network drops occur mid-pipeline.</p>
+            <p>Ultimately, using HDFS to store data as the underlying layer for large-scale compute engines (and modern distributed databases like HBase) remains one of the greatest architectural patterns in modern big data technology.</p>
+        </article>
+
+    </main>
+
+    <script>
+        // Simple scroll progress bar script
+        window.onscroll = function() {
+            let winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            let height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            let scrolled = (winScroll / height) * 100;
+            document.getElementById("progress-bar").style.width = scrolled + "%";
+        };
+    </script>
+</body>
+</html>

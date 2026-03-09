@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Processing | In-Depth Study Notes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.7;
+            padding-bottom: 100px;
+        }
+
+        /* Scroll Progress Bar */
+        #progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(to right, var(--accent-blue), var(--accent-purple));
+            width: 0%;
+            z-index: 1000;
+            transition: width 0.1s ease-out;
+        }
+
+        /* Feed Container */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Feed Items */
+        .feed-item {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .feed-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        h2 {
+            color: var(--accent-blue);
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h3 {
+            color: #e2e8f0;
+            margin: 25px 0 15px 0;
+            font-size: 1.3rem;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        /* Instructor Note Callout */
+        .instructor-note {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 25px 0;
+        }
+
+        .instructor-note strong {
+            display: block;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
+            font-family: 'Fira Code', monospace;
+            overflow-x: auto;
+        }
+
+        .viz-title {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Broker Diagram */
+        .diagram-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .node {
+            background: var(--surface-color);
+            border: 2px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .node.producer { border-color: var(--accent-purple); color: #c4b5fd; }
+        .node.consumer { border-color: var(--accent-green); color: #6ee7b7; }
+        
+        .queue {
+            display: flex;
+            border: 2px solid #475569;
+            padding: 5px;
+            gap: 5px;
+            background: #020617;
+        }
+
+        .msg {
+            background: var(--accent-blue);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .arrow {
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* Time Windows Visual */
+        .timeline {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin-bottom: 15px;
+        }
+        .window-block {
+            height: 30px;
+            background: var(--accent-blue);
+            flex: 1;
+            text-align: center;
+            font-size: 0.8rem;
+            line-height: 30px;
+            color: white;
+            border-radius: 4px;
+        }
+        .window-block.hop {
+            background: rgba(139, 92, 246, 0.5);
+            border: 1px solid var(--accent-purple);
+            margin-left: -20px;
+            z-index: 10;
+        }
+
+        /* Compare Table */
+        .compare-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .compare-card {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .compare-card h4 {
+            color: var(--accent-purple);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Tag */
+        .tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="progress-bar"></div>
+
+    <div class="feed-container">
+        
+        <header class="header">
+            <h1>Stream Processing</h1>
+            <p>System Design Fundamentals • Continuous Vertical Study Feed</p>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="feed-item">
+            <h2>🌊 Background & Core Concepts</h2>
+            <p>Often, we will have lots of data coming in that we want to process asynchronously in the background. </p>
+            <ul>
+                <li><strong>Streaming</strong> works on an <strong>unbounded set of data</strong> (infinite flow), as opposed to just a limited set of files/records (which is Batch Processing).</li>
+                <li>Messages are created by a <strong>Producer</strong> node, and eventually handled by at least one <strong>Consumer</strong> node.</li>
+            </ul>
+            
+            <div class="instructor-note">
+                <strong>🎙️ Instructor's Insight</strong>
+                While these messages <i>can</i> be sent directly from producer to consumer (via protocols like UDP multicast), it is common practice to use an intermediary called a <strong>Message Broker</strong> to buffer these messages in a centralized place. This protects data if a consumer crashes!
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="feed-item">
+            <h2>📦 Message Brokers & Delivery Patterns</h2>
+            <p>A Message Broker is a special type of database that handles streaming. Producers push to it, and consumers pull from it. Some brokers keep messages durably, while others delete them after successful consumption.</p>
+
+            <h3>Two Main Delivery Patterns:</h3>
+            <ul>
+                <li><span class="tag">Fan-out</span> Send the exact same message to <strong>all</strong> consumers.</li>
+                <li><span class="tag">Load Balancing</span> Send one message per consumer to maximize throughput and processing speed.</li>
+            </ul>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualizing a Message Broker Queue</div>
+                <div class="diagram-row">
+                    <div class="node producer">Producer</div>
+                    <div class="arrow">➔</div>
+                    <div class="queue">
+                        <div class="msg">m5</div>
+                        <div class="msg">m4</div>
+                        <div class="msg">m3</div>
+                        <div class="msg">m2</div>
+                        <div class="msg">m1</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <div class="node consumer">Consumer 1</div>
+                        <div class="node consumer">Consumer 2</div>
+                        <div class="node consumer">Consumer 3</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>The "In-Order" Problem</h3>
+            <p>Even though a queue holds messages in the order they were received, if a consumer crashes or takes a while to handle a message, the broker may have sent the next message to a different consumer which processed it first!</p>
+            <p>Messages can reliably be delivered in order, but it comes with a <strong>performance penalty</strong>.</p>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="feed-item">
+            <h2>⚡ Types of Message Brokers</h2>
+            
+            <div class="compare-grid">
+                <div class="compare-card">
+                    <h4>1. In-Memory</h4>
+                    <p>Can be done on something like a <strong>Redis</strong> instance.</p>
+                    <ul>
+                        <li>No persistence (data held in RAM).</li>
+                        <li>Messages are permanently deleted the second a consumer acknowledges them.</li>
+                        <li><strong>Best for:</strong> Maximum speed, when messages take a long time to process, and their order does not matter.</li>
+                    </ul>
+                </div>
+                <div class="compare-card">
+                    <h4>2. Log Based (On Disk)</h4>
+                    <p>Messages sent to an <strong>append-only log</strong> on disk.</p>
+                    <ul>
+                        <li>Highly persistent and replicable.</li>
+                        <li>Keeps messages around after processing so you can potentially replay them.</li>
+                        <li><strong>Best for:</strong> Fault tolerance and ordering message processing within a partition.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>🎙️ Deep Dive: Log-Based Partitions</strong>
+                The Log can be partitioned to improve performance. However, there is a golden rule: <strong>One consumer per partition</strong>. This ensures ordered delivery. The downside? A single hard-to-process message stops the rest of the partition from proceeding forward!
+            </div>
+
+            <div class="viz-container">
+                <div class="viz-title">Log-Based Reading via Index Tracking</div>
+                <div class="diagram-row">
+                    <div class="queue" style="border-color: var(--accent-purple);">
+                        <div class="msg">m5</div>
+                        <div class="msg">m4</div>
+                        <div class="msg" style="background: #475569;">m3</div>
+                        <div class="msg" style="background: #475569;">m2</div>
+                        <div class="msg" style="background: #475569;">m1</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                    <div class="node consumer">Consumer 1<br><small>Tracker: Index 3</small></div>
+                </div>
+                <div class="diagram-row">
+                    <div class="queue" style="border-color: var(--accent-purple);">
+                        <div class="msg">m10</div>
+                        <div class="msg">m9</div>
+                        <div class="msg">m8</div>
+                        <div class="msg" style="background: var(--accent-red);">m7</div>
+                        <div class="msg" style="background: #475569;">m6</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                    <div class="node consumer">Consumer 2<br><small>Tracker: Index 1</small></div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px; text-align: center;">* Consumers keep track of their index locally. If they crash, the broker knows exactly where they left off.</p>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="feed-item">
+            <h2>📊 Common Uses: Logging & Metrics</h2>
+            <p>We often want to aggregate certain events into time windows, such as application logs or metric loads. This is challenging because an event can arrive to a stream any amount of time after the window closes due to out-of-sync server clocks.</p>
+
+            <h3>Types of Fixed Time Intervals:</h3>
+            <ul>
+                <li><strong>Tumbling Windows:</strong> Non-overlapping intervals of fixed length (e.g. every minute starting at 0 seconds).</li>
+                <li><strong>Hopping Windows:</strong> Overlapping intervals of fixed length (e.g. all 5-minute intervals starting at 0 seconds). You aggregate tumbling windows to create hopping windows.</li>
+                <li><strong>Sliding Windows:</strong> Fixed duration, but no set start point. Created using an in-memory buffer of events, dropping them once they age out.</li>
+            </ul>
+
+            <div class="viz-container">
+                <div class="viz-title">Tumbling vs Hopping Windows</div>
+                <p style="font-size: 0.85rem; margin-bottom: 5px; color: #94a3b8;">Tumbling (Non-overlapping)</p>
+                <div class="timeline">
+                    <div class="window-block">12:00-12:01</div>
+                    <div class="window-block">12:01-12:02</div>
+                    <div class="window-block">12:02-12:03</div>
+                </div>
+                <br>
+                <p style="font-size: 0.85rem; margin-bottom: 5px; color: #94a3b8;">Hopping (Overlapping)</p>
+                <div class="timeline">
+                    <div class="window-block hop" style="margin-left: 0;">12:00 - 12:05</div>
+                    <div class="window-block hop">12:01 - 12:06</div>
+                    <div class="window-block hop">12:02 - 12:07</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="feed-item">
+            <h2>🔄 Change Data Capture & Event Sourcing</h2>
+            
+            <h3>Change Data Capture (CDC)</h3>
+            <p>Writes to a database are converted into a stream. They can then be consumed by derived data sources (caches, search indexes, data warehouses) to keep them up to date without network-heavy custom code.</p>
+            <p>Assuming logs are persistent, they can be <strong>compacted</strong> by only holding the most recent value of keys.</p>
+
+            <h3>Event Sourcing</h3>
+            <p>Similar to CDC, but instead of streaming database writes, <strong>all events of the user</strong> are put into a streamed, append-only log.</p>
+            <ul>
+                <li><strong>Pros:</strong> Highly future-proof. You aren't stuck with a specific data schema and can derive entirely new databases from it.</li>
+                <li><strong>Cons:</strong> The log <em>cannot</em> be compacted, because everything is an "event", not a final state write.</li>
+            </ul>
+
+            <div class="instructor-note">
+                <strong>🎙️ Instructor's Example: Event Sourcing</strong>
+                Instead of a database holding `watch_count: 42`, Event Sourcing logs specific events:<br><br>
+                <i>"Jordan clicks the watch button. Jordan is the 40th watcher of Kate Upton's post. Jordan is the 41st watcher of Kate Upton's post. Jordan is the 42nd watcher of Kate Upton's post."</i>
+            </div>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="feed-item">
+            <h2>🔗 Stream Joins</h2>
+            <p>Just like batch processing, we need to associate data. To reduce network calls to an actual database, we often keep some amount of "state" local to the stream broker.</p>
+
+            <ul>
+                <li><strong>Stream-Stream Joins:</strong> Joining two live event streams (e.g., a search query stream + a click stream). The broker keeps a local index. If a click arrives within a certain time window, it joins it with the search index.</li>
+                <li><strong>Stream-Table Joins:</strong> Enriching a stream event with database data. To avoid making a network call for every single event, you subscribe to the CDC of the database table and maintain a <strong>live local copy</strong> of the table inside the stream broker!</li>
+                <li><strong>Table-Table Joins:</strong> Subscribing to multiple sources of CDC to keep multiple local tables up to date. The result of the joined streams acts as a pre-computed cache of an actual SQL query.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 7 -->
+        <article class="feed-item">
+            <h2>🛡️ Fault Tolerance (Exactly Once Processing)</h2>
+            <p>We want to ensure that each message is processed exactly once (no less, no more).</p>
+
+            <h3>1. Ensuring processed AT LEAST once:</h3>
+            <ul>
+                <li>Occasionally <strong>checkpoint</strong> stream state to disk to restart from the most recent state on crash.</li>
+                <li>Run <strong>microbatches</strong>: let a few stream events accumulate and run a batch workload on them (batch jobs are easy to restart if they fail).</li>
+            </ul>
+
+            <h3>2. Ensuring NOT processed more than once:</h3>
+            <ul>
+                <li>Use <strong>Idempotence</strong>: Keep track of seen messages via a unique message ID (idempotency key) to ensure they are ignored if sent twice.</li>
+                <li>Use <strong>Atomic Transactions</strong> (like Two-Phase Commit). This guarantees delivery and processing simultaneously, but comes with a massive penalty—it is much slower.</li>
+            </ul>
+        </article>
+
+        <div style="text-align: center; margin-top: 50px; color: var(--text-muted);">
+            <p>End of Study Feed • Stream Processing Fundamentals</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Scroll Progress Bar
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('progress-bar').style.width = scrolled + '%';
+        });
+
+        // Intersection Observer for Feed Fade-in effect
+        const feedItems = document.querySelectorAll('.feed-item');
+        
+        const observerOptions = {
+            root: null,
+            rootMargin: '0px',
+            threshold: 0.15 // Triggers when 15% of the item is visible
+        };
+
+        const feedObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target); // Only animate once
+                }
+            });
+        }, observerOptions);
+
+        feedItems.forEach(item => {
+            feedObserver.observe(item);
+        });
+        
+        // Trigger for elements already in viewport on load
+        setTimeout(() => {
+            feedItems.forEach(item => {
+                const rect = item.getBoundingClientRect();
+                if (rect.top < window.innerHeight) {
+                    item.classList.add('visible');
+                }
+            });
+        }, 100);
+    </script>
+</body>
+</html>

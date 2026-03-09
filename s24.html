@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riak Study Notes - Vertical Feed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base & Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Dark Slate Background */
+            color: #cbd5e1;
+            line-height: 1.7;
+        }
+        
+        /* Layout Structure */
+        .header-main {
+            background-color: #1e293b;
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 3px solid #38bdf8;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .header-main h1 {
+            color: #f8fafc;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        .header-main p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+        .feed-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px; /* Space between topics */
+        }
+
+        /* Card / Section Styles */
+        .card {
+            background-color: #1e293b;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border-left: 5px solid #38bdf8;
+        }
+        .card h2 {
+            color: #f8fafc;
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .card h2 span {
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        .card p, .card li {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+        .card ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+        .highlight {
+            color: #38bdf8;
+            font-weight: 600;
+        }
+        .warning-text {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        /* --- VISUALIZATIONS (Pure CSS) --- */
+        
+        /* 1. Architecture Box */
+        .vis-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+        }
+        .arch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            text-align: center;
+        }
+        .arch-item {
+            background: #334155;
+            padding: 15px;
+            border-radius: 6px;
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+
+        /* 2. Data Modeling Comparison */
+        .model-compare {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .model-col {
+            flex: 1;
+            min-width: 280px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .model-col h3 {
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .data-block {
+            background: #334155;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #10b981; /* Green text for code feel */
+            white-space: pre-wrap;
+        }
+
+        /* 3. Conflict Resolution Flowchart */
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .flow-row {
+            display: flex;
+            gap: 40px;
+            width: 100%;
+            justify-content: center;
+        }
+        .flow-node {
+            background: #334155;
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+            position: relative;
+            border: 2px solid #38bdf8;
+        }
+        .flow-node.conflict { border-color: #ef4444; color: #fca5a5; }
+        .flow-node.merge { border-color: #10b981; color: #6ee7b7; background: #064e3b; }
+        .arrow-down {
+            width: 0; 
+            height: 0; 
+            border-left: 10px solid transparent;
+            border-right: 10px solid transparent;
+            border-top: 15px solid #64748b;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #0f172a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        th {
+            background: #38bdf8;
+            color: #0f172a;
+            font-weight: 700;
+        }
+        tr:last-child td { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <header class="header-main">
+        <h1>Riak Database System</h1>
+        <p>Continuous Scroll Study Notes | Combining Slide Data & Audio Explanations</p>
+    </header>
+
+    <main class="feed-container">
+
+        <!-- Intro -->
+        <section class="card">
+            <h2><span>01</span> Introduction & Context</h2>
+            <p>Welcome to the breakdown of <span class="highlight">Riak</span>, a distributed Key-Value store. The instructor notes that while this might seem like a dry topic (joking that her ex-girlfriend would say they have a lot in common in that regard), Riak is a highly relevant data system used by a massive number of tech companies today.</p>
+            <p><strong>Prerequisite Note:</strong> This lecture heavily references <strong>Cassandra</strong> (a previous topic). Because Riak and Cassandra share a lot of underlying architecture, this breakdown focuses primarily on the critical <em>differences</em> between the two.</p>
+        </section>
+
+        <!-- Background -->
+        <section class="card">
+            <h2><span>02</span> Background & Shared Architecture</h2>
+            <p>Riak is designed to achieve exceptionally high read and write throughput. It is a <span class="highlight">Dynamo-style database</span>, meaning it shares its foundational blueprint with Cassandra.</p>
+            
+            <div class="vis-box">
+                <p style="text-align:center; margin-bottom:15px; color:#94a3b8;">Shared Architecture Concepts (Riak = Cassandra)</p>
+                <div class="arch-grid">
+                    <div class="arch-item">Consistent Hashing<br><small>(Partitioning Data)</small></div>
+                    <div class="arch-item">Multi-Master<br><small>(Leaderless Replication)</small></div>
+                    <div class="arch-item">LSM Trees<br><small>(Write Engine)</small></div>
+                    <div class="arch-item">Anti-Entropy &<br>Read Repair</div>
+                </div>
+            </div>
+            
+            <p><strong>Student Takeaway:</strong> You do not need to relearn the foundational network architecture if you already understand Cassandra. Your primary focus from here on should be how Riak handles <strong>data models</strong> and <strong>write conflicts</strong> differently.</p>
+        </section>
+
+        <!-- Data Modeling -->
+        <section class="card">
+            <h2><span>03</span> Data Modeling: KV vs. Wide-Column</h2>
+            <p>Cassandra is a <em>Wide-Column Store</em>, utilizing partition keys and clustering keys to sort structured rows. Riak is a pure <span class="highlight">Key-Value (KV) Store</span>. In Riak, the "Value" is completely opaque to the database—it can literally be anything (a simple string, a deeply nested JSON document, or even a binary blob like an image).</p>
+            
+            <div class="model-compare">
+                <div class="model-col">
+                    <h3>Cassandra (Wide-Column)</h3>
+                    <div class="data-block">
+Partition_Key: "User_123"
+Clustering_Key: "Date_01-01-2024"
+  ↳ Col 1: "Purchase_A"
+  ↳ Col 2: "$15.00"
+                    </div>
+                    <p style="margin-top:10px; font-size:0.9rem;"><em>Great for range queries (e.g., "Get all purchases for User 123 in January").</em></p>
+                </div>
+                <div class="model-col">
+                    <h3>Riak (Key-Value)</h3>
+                    <div class="data-block">
+Key: "User_123"
+Value: 
+{
+  "name": "Alice",
+  "purchases": [...],
+  "profile_pic": "[Binary Blob]"
+}
+                    </div>
+                    <p style="margin-top:10px; font-size:0.9rem;"><em>Massive flexibility, but terrible for native querying since the DB can't "see" inside the value.</em></p>
+                </div>
+            </div>
+
+            <p><strong>The Querying Trade-off:</strong> Because Riak just sees the value as a blob, to do queries on data for something other than the direct Key requires workarounds:</p>
+            <ul>
+                <li>Adding extra pieces of metadata to each KV pair for a <strong>secondary index</strong> (generally inefficient).</li>
+                <li>Integrating native <strong>Riak Search indexes</strong> to parse your documents.</li>
+            </ul>
+        </section>
+
+        <!-- Conflict Resolution -->
+        <section class="card">
+            <h2><span>04</span> Conflict Resolution (The Biggest Difference)</h2>
+            <p>Because both databases use a leaderless replication system, any node can accept a write. This inevitably leads to race conditions—two clients writing to the same key simultaneously without knowing about each other.</p>
+            
+            <ul>
+                <li><strong>Cassandra:</strong> Uses <span class="warning-text">Last Write Wins (LWW)</span> based on timestamps. The older write is completely lost/deleted. Server clocks drift, making this unreliable.</li>
+                <li><strong>Riak:</strong> Refuses to lose your data. It uses <span class="highlight">Dotted Version Vectors</span> to detect concurrent writes and stores them <strong>both</strong> as <em>Siblings</em>.</li>
+            </ul>
+
+            <div class="vis-box flow-container">
+                <p style="color:#94a3b8; font-size:0.9rem;">Visualizing Riak's Sibling Creation</p>
+                <div class="flow-row">
+                    <div class="flow-node">Client A Writes<br>Key="A", Val="1"</div>
+                    <div class="flow-node">Client B Writes<br>Key="A", Val="2"</div>
+                </div>
+                <div class="arrow-down"></div>
+                <div class="flow-node conflict">
+                    <strong>Riak Database</strong><br>
+                    Detected Concurrent Write!<br>
+                    <em>Stores Siblings: [Val="1", Val="2"]</em>
+                </div>
+                <div class="arrow-down"></div>
+                <div class="flow-node merge">
+                    <strong>Application Server (Next Read)</strong><br>
+                    Receives BOTH siblings.<br>
+                    Developer's custom code must merge them!
+                </div>
+            </div>
+
+            <p><strong>The Developer's Burden:</strong> When an application server reads a key with siblings, Riak hands back all versions. It is up to the developer to write application-level code to merge these in a reasonable way for the next write.</p>
+        </section>
+
+        <!-- CRDTs -->
+        <section class="card">
+            <h2><span>05</span> CRDTs: The "Easy Button" for Conflicts</h2>
+            <p>If you don’t want to take on the heavy burden of manually writing application code to merge database siblings, Riak provides a native solution.</p>
+            <p>Riak has excellent built-in support for <span class="highlight">CRDTs (Conflict-free Replicated Data Types)</span>. These are mathematical data structures that the database natively understands how to auto-merge.</p>
+            <ul>
+                <li><strong>Counters:</strong> Concurrent increments auto-sum perfectly.</li>
+                <li><strong>Sets:</strong> Concurrent additions/removals are unionized without data loss.</li>
+                <li><strong>Maps:</strong> Key-value dictionaries inside the value that merge smoothly.</li>
+            </ul>
+        </section>
+
+        <!-- Conclusion -->
+        <section class="card">
+            <h2><span>06</span> Conclusion & Summary Cheat Sheet</h2>
+            <p>Riak is a high-throughput database that achieves scale via partitioning, multi-master replication, and LSM trees. Unlike Cassandra, it is a KV store—use it primarily when <strong>single key accesses are important</strong> rather than range queries over a partition.</p>
+            <p>The main benefits of Riak are <span class="highlight">greater flexibility in values</span> and <span class="highlight">zero data loss</span> on conflicting writes (either by writing app-level merge code or using CRDTs).</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Riak</th>
+                        <th>Cassandra</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Data Model</strong></td>
+                        <td>Pure Key-Value</td>
+                        <td>Wide-Column</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Value Type</strong></td>
+                        <td>Anything (Blobs, complex JSON, strings)</td>
+                        <td>Structured (Rows and Columns)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Range Queries</strong></td>
+                        <td>Poor (Requires secondary indices)</td>
+                        <td>Excellent (Via clustering keys)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Conflicts</strong></td>
+                        <td>Dotted Version Vectors / Saves as <strong>Siblings</strong></td>
+                        <td>Timestamps / Last Write Wins (LWW)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Data Loss Risk</strong></td>
+                        <td><span style="color:#10b981;">Low</span> (Keeps everything, app merges it)</td>
+                        <td><span style="color:#ef4444;">High</span> (Silently drops "older" writes)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+    </main>
+
+</body>
+</html>

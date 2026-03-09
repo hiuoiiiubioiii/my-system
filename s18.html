@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Feed: Gossip Protocols & Apache Cassandra</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.2);
+            --warning: #fbbf24;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding-bottom: 4rem;
+        }
+
+        /* Feed Header */
+        .feed-header {
+            text-align: center;
+            padding: 3rem 0 1rem 0;
+            border-bottom: 2px solid var(--card-bg);
+        }
+
+        .feed-header h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .feed-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Content Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border-left: 5px solid var(--accent);
+            position: relative;
+        }
+
+        .card.warning { border-left-color: var(--warning); }
+        .card.success { border-left-color: var(--success); }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card p {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .card ul {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        /* Visualizations */
+        .viz-container {
+            background: #000;
+            border-radius: 12px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .viz-stage {
+            text-align: center;
+            width: 100%;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px dashed #333;
+        }
+        
+        .viz-stage:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .viz-title {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+
+        /* Node System CSS */
+        .network {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.5s ease;
+        }
+
+        .node.infected {
+            background: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .connector {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        /* Callout Box */
+        .callout {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .callout-title {
+            color: var(--warning);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <!-- Header -->
+        <header class="feed-header">
+            <h1>Gossip Protocols</h1>
+            <p>Comprehensive Study Breakdown • Applied to Apache Cassandra</p>
+        </header>
+
+        <!-- Context & Definition -->
+        <article class="card">
+            <h2>🌍 Background & Core Concept</h2>
+            <p>In distributed systems, we frequently need to pass information around from node to node to achieve a <strong>broadcasting of information</strong> across an entire cluster.</p>
+            
+            <p>Typically, systems might use a <strong>centralized coordination service</strong> or a membership/consensus service. However, these require extra infrastructure and can become bottlenecks.</p>
+            
+            <p><strong>The Solution:</strong> A <span class="highlight">Gossip Protocol</span>. This is a decentralized method where nodes communicate directly with one another without a central authority.</p>
+            
+            <p><strong>The Analogy:</strong> The instructor explicitly compares it to the spread of an infectious disease or a rumor. Information starts at one node and spreads exponentially as nodes "infect" (inform) other random nodes.</p>
+        </article>
+
+        <!-- Visualization -->
+        <article class="card success">
+            <h2>🦠 How It Spreads: The Visualization</h2>
+            <p>Here is a step-by-step visual of how a message (like a node heartbeat) propagates through a cluster. The rule is simple: <strong>Pick a few nodes randomly (e.g., 2), and broadcast the message to them.</strong></p>
+            
+            <div class="callout" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.1);">
+                <div class="callout-title" style="color: var(--success);">⚡ The Golden Rule</div>
+                <p style="margin:0; font-size: 0.95rem;">A node will ONLY broadcast the message the <strong>first time</strong> it receives it. If a node is randomly selected to receive a message it already knows, it does not re-broadcast it.</p>
+            </div>
+
+            <div class="viz-container">
+                <!-- Round 0 -->
+                <div class="viz-stage">
+                    <div class="viz-title">Initial State: 1 Node Receives Information</div>
+                    <div class="network">
+                        <div class="node infected"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                    </div>
+                </div>
+
+                <!-- Round 1 -->
+                <div class="viz-stage">
+                    <div class="viz-title">Round 1: Original node randomly selects 2 peers</div>
+                    <div class="network">
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                    </div>
+                    <div class="connector">↑ Now 3 nodes have the message ↑</div>
+                </div>
+
+                <!-- Round 2 -->
+                <div class="viz-stage">
+                    <div class="viz-title">Round 2: New nodes select 2 random peers each</div>
+                    <div class="network">
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node"></div>
+                        <div class="node"></div>
+                    </div>
+                    <div class="connector">↑ Exponential Spread ↑</div>
+                </div>
+
+                <!-- Final -->
+                <div class="viz-stage">
+                    <div class="viz-title">Final State: Complete Cluster Consensus</div>
+                    <div class="network">
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                        <div class="node infected"></div>
+                    </div>
+                    <div class="connector">After a few rounds, there is a high probability all nodes receive the message!</div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Cassandra Implementation -->
+        <article class="card">
+            <h2>⚙️ Real-World Application: Apache Cassandra</h2>
+            <p>Cassandra uses Gossip Protocols primarily for <strong>Failure Detection and Node Membership</strong>. Nodes use the protocol to tell the rest of the cluster what is going on.</p>
+            
+            <p><strong>What exactly are they gossiping about?</strong></p>
+            <ul>
+                <li><strong>Local Load / State:</strong> Nodes broadcast their local state. (e.g., "Here is my current load, the writes I'm taking in, and whether it looks like I might crash soon.")</li>
+                <li><strong>Heartbeats:</strong> Nodes send out periodic pulses to prove they are alive.</li>
+                <li><strong>Timestamps:</strong> Every heartbeat is attached to a timestamp of when it was received.</li>
+            </ul>
+        </article>
+
+        <!-- The Conflict Resolution Logic -->
+        <article class="card warning">
+            <h2>⏱️ Timestamps & Resolving Conflicts</h2>
+            <p>Because gossip spreads randomly, information arrives out of order. Node A might hear about Node C from Node B, but later hear a different update about Node C from Node D.</p>
+            
+            <p><strong>How Nodes Keep Data Accurate:</strong></p>
+            <p>Upon receiving gossip, nodes use <span class="highlight">Timestamps</span> to keep only the <strong>most recent</strong> messages. They hold onto the most recent timestamp they have heard for every other node in the cluster.</p>
+            
+            <ul>
+                <li><em>Example:</em> Node 1 receives a heartbeat from Node X at 12:00 PM. Node 2 receives a heartbeat from Node X at 1:00 PM. When Node 1 and Node 2 gossip, the 1:00 PM timestamp wins.</li>
+            </ul>
+
+            <p><strong>Failure Detection:</strong> All nodes use this most recent heartbeat timestamp to determine if other nodes are down. If a node hasn't received a heartbeat from a specific node in a while (e.g., an hour), it assumes that node is dead and will <strong>stop sending read/write requests to it.</strong></p>
+
+            <div class="callout">
+                <div class="callout-title">⚠️ The Real-World Caveat (Clock Drift)</div>
+                <p style="margin:0; font-size: 0.95rem; color: #cbd5e1;">Server clock timestamps are <strong>not always perfectly coordinated</strong>. "Clock drift" between servers can be problematic when relying strictly on exact timestamps to order messages.</p>
+            </div>
+        </article>
+
+        <!-- Conclusion -->
+        <article class="card">
+            <h2>📝 Conclusion & Limitations</h2>
+            <p>Gossip Protocols are excellent for <strong>quickly broadcasting messages to many nodes with relatively low overhead and coordination</strong>. They are especially useful in large clusters for background tasks like failure detection.</p>
+            
+            <p>However, there is a major limitation:</p>
+            <ul>
+                <li><strong>No Inherent Ordering:</strong> The protocol is just "throwing as many messages around as possible." It does not ensure that messages are delivered or processed in the exact order they were created.</li>
+            </ul>
+            
+            <p>To fix the lack of ordering, systems must pair the Gossip Protocol with a secondary mechanism to sort out which message is newest, such as <strong>Timestamps</strong> (used in Cassandra) or <strong>Vector Clocks</strong>.</p>
+        </article>
+
+    </div>
+
+</body>
+</html>

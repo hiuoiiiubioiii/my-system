@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Parquet: Complete Study Guide</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; /* Slate 900 */
+            --text-main: #f8fafc; /* Slate 50 */
+            --text-muted: #cbd5e1; /* Slate 300 */
+            --accent-blue: #38bdf8; /* Sky 400 */
+            --accent-purple: #c084fc; /* Purple 400 */
+            --card-bg: #1e293b; /* Slate 800 */
+            --card-border: #334155; /* Slate 700 */
+            --highlight: #0284c7; /* Sky 600 */
+            --success: #10b981; /* Emerald 500 */
+            --danger: #ef4444; /* Red 500 */
+            --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            padding-bottom: 2rem;
+            border-bottom: 2px solid var(--card-border);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Feed Topics (Sections) */
+        .topic-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .topic-card::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 2.5rem;
+            width: 1rem;
+            height: 1rem;
+            background-color: var(--accent-blue);
+            border-radius: 50%;
+            display: none; /* Can be enabled for a timeline look */
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            color: var(--accent-purple);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 0.5rem;
+        }
+
+        h3 {
+            font-size: 1.3rem;
+            color: var(--text-main);
+            margin: 1.5rem 0 0.5rem 0;
+        }
+
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        ul {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+            color: var(--text-muted);
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        strong {
+            color: var(--text-main);
+        }
+
+        /* Deep Dive / Instructor Notes Box */
+        .deep-dive {
+            background-color: rgba(56, 189, 248, 0.1);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .deep-dive h4 {
+            color: var(--accent-blue);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Custom Visualizations (CSS Grid/Flex) */
+        .viz-container {
+            background-color: #0b1120;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-family: monospace;
+        }
+
+        /* Viz 1: Hybrid Storage */
+        .grid-hybrid {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 1rem;
+            align-items: center;
+        }
+        .row-labels { display: flex; flex-direction: column; gap: 0.5rem; color: #64748b; font-size: 0.9rem;}
+        .col-blocks { display: flex; gap: 1rem; flex-wrap: wrap;}
+        .data-block { padding: 0.5rem 1rem; border-radius: 4px; font-weight: bold; text-align: center;}
+        .block-a { background-color: rgba(56, 189, 248, 0.2); border: 1px solid var(--accent-blue); color: var(--accent-blue); }
+        .block-b { background-color: rgba(16, 185, 129, 0.2); border: 1px solid var(--success); color: var(--success); }
+        .block-c { background-color: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #f59e0b; }
+        
+        .viz-title { text-align: center; color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;}
+
+        /* Viz 2: Architecture Hierarchy */
+        .arch-file { border: 2px dashed #475569; padding: 1rem; border-radius: 8px; position: relative; margin-top: 1rem;}
+        .arch-rowgroup { border: 2px solid #64748b; padding: 1rem; border-radius: 8px; margin-top: 1rem;}
+        .arch-chunk { border: 2px solid var(--accent-blue); padding: 1rem; border-radius: 8px; margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;}
+        .arch-page { background-color: rgba(56, 189, 248, 0.1); border: 1px solid var(--accent-blue); padding: 0.5rem; border-radius: 4px; flex: 1; min-width: 120px; text-align: center; font-size: 0.85rem;}
+        .arch-label { position: absolute; top: -10px; left: 10px; background: #0b1120; padding: 0 5px; font-size: 0.8rem; color: #94a3b8; }
+        .arch-label-inner { font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.5rem; display: block;}
+
+        /* Viz 3: Encoding Pipeline */
+        .encoding-flex { display: flex; flex-direction: column; gap: 1.5rem; }
+        .enc-step { background: var(--card-bg); padding: 1rem; border-radius: 6px; border: 1px solid var(--card-border); }
+        .enc-arrow { text-align: center; color: var(--accent-purple); font-size: 1.5rem; font-weight: bold; }
+        .dict-grid { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem; align-items: center; max-width: 300px; margin: 0 auto;}
+        .dict-key { color: var(--accent-purple); font-weight: bold; text-align: right;}
+        .dict-val { background: #0f172a; padding: 0.2rem 0.5rem; border: 1px solid #334155; border-radius: 4px;}
+        .array-box { display: flex; gap: 0.2rem; justify-content: center; flex-wrap: wrap;}
+        .array-item { border: 1px solid #475569; padding: 0.2rem 0.5rem; border-radius: 4px; background: #0f172a;}
+        .array-tuple { border: 1px solid var(--success); color: var(--success); padding: 0.2rem 0.5rem; border-radius: 4px; background: rgba(16, 185, 129, 0.1);}
+
+        /* Viz 4: Predicate Pushdown */
+        .pred-grid { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;}
+        .pred-page { width: 200px; padding: 1rem; border-radius: 8px; text-align: center; position: relative; border: 2px solid;}
+        .pred-skip { border-color: var(--danger); background: rgba(239, 68, 68, 0.05); color: #94a3b8;}
+        .pred-scan { border-color: var(--success); background: rgba(16, 185, 129, 0.05);}
+        .pred-status { position: absolute; top: -12px; right: -12px; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;}
+        .status-skip { background: var(--danger); color: white;}
+        .status-scan { background: var(--success); color: white;}
+
+        /* Tag Pill */
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            background-color: var(--card-border);
+            color: var(--text-main);
+            border-radius: 999px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="feed-container">
+        
+        <header>
+            <h1>Apache Parquet</h1>
+            <p>Comprehensive Study Guide & Architecture Breakdown</p>
+            <div style="margin-top: 1rem;">
+                <span class="tag">Big Data</span>
+                <span class="tag">Columnar Storage</span>
+                <span class="tag">Data Engineering</span>
+            </div>
+        </header>
+
+        <!-- Topic 1 -->
+        <article class="topic-card">
+            <h2>1. Background & The Core Problem</h2>
+            <p>To understand Parquet, we must understand the problem it solves. Previously, data serialization formats like <strong>Avro, Thrift, and Protocol Buffers</strong> were discussed. These formats store data in a <strong>row-oriented</strong> manner.</p>
+            
+            <h3>The Problem with Row Storage</h3>
+            <ul>
+                <li>Row-oriented storage keeps all fields of a single record (row) adjacent on the disk.</li>
+                <li>This is excellent for finding a specific user's entire profile.</li>
+                <li>However, <strong>Big Data Analytics</strong> (using MapReduce or Spark) rarely needs whole rows. It usually performs aggregations across specific columns (e.g., "Find the average age of all 10 million users").</li>
+            </ul>
+
+            <div class="deep-dive">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>If you use row-based storage for analytics, the system wastes massive amounts of time reading irrelevant columns just to find the ones you need. By switching to <strong>column-oriented storage</strong>, we gain <em>data locality</em>. If all "ages" are stored physically next to each other on the disk, reading them becomes incredibly fast. Furthermore, we want data to be stored as compactly as possible so transferring it over the network to compute nodes is efficient.</p>
+            </div>
+        </article>
+
+        <!-- Topic 2 -->
+        <article class="topic-card">
+            <h2>2. Hybrid-Oriented Storage</h2>
+            <p>While pure column storage is great for analytics, it suffers from a major flaw: <strong>Lack of disk locality between elements of the same row</strong>. If you ever *do* need to reassemble a full row, it requires jumping all over the disk to find Column A, Column B, etc.</p>
+            <p><strong>Parquet's Solution:</strong> A Hybrid Approach.</p>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: The Hybrid Approach</div>
+                <p style="text-align: center; font-size: 0.9rem; margin-bottom: 1rem; color: #94a3b8;">Data is partitioned horizontally first, then column-oriented vertically inside the partition.</p>
+                <div class="grid-hybrid">
+                    <div class="row-labels">
+                        <span>Row 0 & 1</span>
+                        <span>Row 2 & 3</span>
+                    </div>
+                    <div>
+                        <div class="col-blocks" style="margin-bottom: 1rem;">
+                            <!-- Partition 1 -->
+                            <div class="data-block block-a">A0, A1</div>
+                            <div class="data-block block-b">B0, B1</div>
+                            <div class="data-block block-c">C0, C1</div>
+                        </div>
+                        <div class="col-blocks">
+                            <!-- Partition 2 -->
+                            <div class="data-block block-a">A2, A3</div>
+                            <div class="data-block block-b">B2, B3</div>
+                            <div class="data-block block-c">C2, C3</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="deep-dive">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>Parquet takes a massive table and slices it horizontally into "partitions" (e.g., Row 0 to Row 100,000). <strong>Inside</strong> that partition, the data is stored by column. This creates a perfect balance: you get the analytical speed of columnar storage, but because columns are bounded within a partition, reassembling a row doesn't require scanning the entire disk.</p>
+            </div>
+        </article>
+
+        <!-- Topic 3 -->
+        <article class="topic-card">
+            <h2>3. Parquet Introduction & Architecture</h2>
+            <p>Parquet data is highly structured hierarchically. The dataset is split into Parquet files containing the following internal hierarchy:</p>
+
+            <ul>
+                <li><strong>Parquet File:</strong> Contains multiple Row Groups and a footer with metadata.</li>
+                <li><strong>Row Groups:</strong> Logical horizontal partitions of the actual data.</li>
+                <li><strong>Column Chunks:</strong> Inside a row group, data is split into chunks for each column.</li>
+                <li><strong>Pages:</strong> The chunks are further divided into pages (typically 1MB in size).</li>
+            </ul>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: File Hierarchy</div>
+                <div class="arch-file">
+                    <span class="arch-label">Parquet File (.parquet)</span>
+                    <div class="arch-rowgroup">
+                        <span class="arch-label-inner">Row Group (e.g., 128 MB)</span>
+                        <div class="arch-chunk">
+                            <span class="arch-label-inner" style="width: 100%;">Column Chunk (e.g., "Country" Col)</span>
+                            <div class="arch-page">
+                                <strong>Page (1 MB)</strong><br>
+                                <span style="font-size: 0.7rem; color: var(--accent-purple);">Metadata (Min/Max/Dict)</span><br>
+                                <span style="font-size: 0.7rem;">+ Encoded Data</span>
+                            </div>
+                            <div class="arch-page">
+                                <strong>Page (1 MB)</strong><br>
+                                <span style="font-size: 0.7rem; color: var(--accent-purple);">Metadata (Min/Max/Dict)</span><br>
+                                <span style="font-size: 0.7rem;">+ Encoded Data</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="deep-dive">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>The default value for a Row Group is usually <strong>128 Megabytes</strong> of row data. In a database that is Terabytes in size, you will have many partitions. The lowest level of storage is the <strong>Page</strong>. Pages are crucial because they contain metadata (the Min, Max, Count, Dictionaries, and Bloom Filters) regarding the specific 1MB of data encoded inside them. This metadata enables massive query optimizations.</p>
+            </div>
+        </article>
+
+        <!-- Topic 4 -->
+        <article class="topic-card">
+            <h2>4. Data Encoding & Extreme Compression</h2>
+            <p>Because columns naturally contain repeated data (e.g., a "Country" column will have "United States" repeated thousands of times), Parquet utilizes advanced compression algorithms:</p>
+            
+            <ul>
+                <li><strong>Plain Encoding:</strong> If data is fixed length, store raw data. If varying length, store an integer representing the length, followed by data.</li>
+                <li><strong>Dictionary Compression:</strong> Replaces repeating strings with small integer keys.</li>
+                <li><strong>Bit Packing:</strong> Reduces the bit-size of the integer keys.</li>
+                <li><strong>Run Length Encoding (RLE):</strong> Compresses adjacent duplicate values into a mathematical tuple.</li>
+            </ul>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: Compression Pipeline</div>
+                <div class="encoding-flex">
+                    <div class="enc-step">
+                        <span style="color: #94a3b8; font-size: 0.8rem;">1. Raw Uncompressed Column Data</span>
+                        <div class="array-box" style="margin-top: 0.5rem;">
+                            <span class="array-item">"US"</span>
+                            <span class="array-item">"France"</span>
+                            <span class="array-item">"US"</span>
+                            <span class="array-item">"US"</span>
+                            <span class="array-item">"US"</span>
+                        </div>
+                    </div>
+                    
+                    <div class="enc-arrow">↓ Dictionary Compression ↓</div>
+
+                    <div class="enc-step" style="display: flex; justify-content: space-around; align-items: center;">
+                        <div>
+                            <span style="color: #94a3b8; font-size: 0.8rem; display:block; margin-bottom: 0.5rem;">Generated Dictionary</span>
+                            <div class="dict-grid">
+                                <span class="dict-key">0:</span><span class="dict-val">"US"</span>
+                                <span class="dict-key">1:</span><span class="dict-val">"France"</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span style="color: #94a3b8; font-size: 0.8rem; display:block; margin-bottom: 0.5rem;">2. Encoded Array</span>
+                            <div class="array-box">
+                                <span class="array-item">0</span>
+                                <span class="array-item">1</span>
+                                <span class="array-item">0</span>
+                                <span class="array-item">0</span>
+                                <span class="array-item">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="enc-arrow">↓ Run Length Encoding (RLE) ↓</div>
+
+                    <div class="enc-step">
+                        <span style="color: #94a3b8; font-size: 0.8rem;">3. Final RLE + Bit-Packed Array</span>
+                        <div class="array-box" style="margin-top: 0.5rem;">
+                            <span class="array-item">0</span>
+                            <span class="array-item">1</span>
+                            <span class="array-tuple">(0, 3)</span>
+                        </div>
+                        <p style="font-size: 0.8rem; text-align: center; margin-top: 0.5rem; margin-bottom: 0;">Tuple format: <em>(value, number of consecutive times it occurs)</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="deep-dive">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>This pipeline shrinks files exponentially. First, long strings are swapped for integers via the Dictionary. Next, <strong>Bit Packing</strong> comes in. If your dictionary only has 4 unique countries, you don't need a massive 64-bit integer—you only need <strong>2 bits</strong> to represent numbers 0 through 3! Finally, <strong>RLE</strong> handles adjacent duplicates. If "United States" (key 0) appears 3 times in a row, Parquet doesn't write `0, 0, 0`. It writes the tuple <code>(0, 3)</code>.</p>
+            </div>
+        </article>
+
+        <!-- Topic 5 -->
+        <article class="topic-card">
+            <h2>5. Optimal Chunk Size Trade-offs</h2>
+            <p>Choosing the correct Chunk Size is a vital engineering decision when generating Parquet files.</p>
+            <ul>
+                <li><strong>If chunks are too big:</strong> You will not be able to fit all unique values in the dictionary. Parquet will be forced to drop dictionary compression and fallback to inefficient "plain encoding" for the rest of the data.</li>
+                <li><strong>If chunks are too small:</strong> You incur massive storage overhead because you have to store the metadata section for every single tiny chunk, dwarfing the actual data size.</li>
+            </ul>
+        </article>
+
+        <!-- Topic 6 -->
+        <article class="topic-card">
+            <h2>6. Predicate Pushdown (The Speed Secret)</h2>
+            <p>Predicate Pushdown is the ability to filter data at the storage level, skipping massive amounts of irrelevant data before it even enters memory or network bandwidth.</p>
+            
+            <h3>How it skips data:</h3>
+            <ul>
+                <li><strong>Min/Max Stats:</strong> If a query asks for `x > 69`, Parquet reads the page metadata. If the page's Max value is 50, the entire page is skipped.</li>
+                <li><strong>Dictionaries:</strong> If querying for `x == "Japan"`, and "Japan" is not in the page's dictionary, skip the page entirely.</li>
+                <li><strong>Bloom Filters:</strong> Space-efficient probability data structures recently added to Parquet that definitively state if a value is <em>not</em> present.</li>
+                <li><strong>File Partitioning:</strong> Saving files in folders by date/category allows skipping entire files (e.g., reading only `/2023/January/` files).</li>
+            </ul>
+
+            <div class="viz-container">
+                <div class="viz-title">Visualization: Predicate Pushdown</div>
+                <p style="text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem; color: #94a3b8;"><strong>SQL Query:</strong> <code>SELECT * WHERE age > 69</code></p>
+                
+                <div class="pred-grid">
+                    <div class="pred-page pred-skip">
+                        <div class="pred-status status-skip">X</div>
+                        <strong>Page 1</strong><br>
+                        <span style="font-size: 0.8rem;">Min: 10 | Max: 50</span><br>
+                        <span style="font-size: 0.8rem; color: var(--danger); font-weight: bold; display: block; margin-top: 1rem;">SKIPPED (No IO)</span>
+                    </div>
+                    
+                    <div class="pred-page pred-scan">
+                        <div class="pred-status status-scan">✓</div>
+                        <strong>Page 2</strong><br>
+                        <span style="font-size: 0.8rem;">Min: 40 | Max: 80</span><br>
+                        <span style="font-size: 0.8rem; color: var(--success); font-weight: bold; display: block; margin-top: 1rem;">LOADED TO MEMORY</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="deep-dive">
+                <h4>🎙️ Instructor's Deep Dive</h4>
+                <p>This is why <strong>pre-sorting your data</strong> before writing to Parquet is a pro-tip! If data is pre-sorted, the Min/Max values of pages are tight and sequential (e.g., Page 1 is 0-20, Page 2 is 21-40). This allows Predicate Pushdown to skip huge continuous blocks of data instantly. If your data is entirely random, the Min/Max ranges will be vast (e.g., Min 1, Max 100 on every page), rendering this optimization useless.</p>
+            </div>
+        </article>
+
+        <!-- Topic 7 -->
+        <article class="topic-card">
+            <h2>7. Conclusion & Big Data Architecture</h2>
+            <p>Parquet provides a hybrid approach combining column chunks with rich metadata to allow for highly efficient querying. However, it is not a direct replacement for row-based serialization.</p>
+
+            <div class="deep-dive" style="border-color: var(--success); background-color: rgba(16, 185, 129, 0.1);">
+                <h4 style="color: var(--success);">🎙️ Final Instructor Takeaways</h4>
+                <p><strong>Parquet doesn't replace Avro, Thrift, or Protobuf. It works in conjunction with them.</strong></p>
+                <p>In a modern Data Lake (like Databricks), you use row-based formats (Avro) for ingesting live, single-record data (e.g., a single user clicking a button). But for <strong>Batch Processing, ETLs, and Analytics</strong>, you convert that data to Parquet.</p>
+                <p>In Big Data, the primary bottlenecks are CPU serialization/deserialization cycles and Network Latency. Because Parquet is so tightly compressed and Predicate Pushdown prevents transferring irrelevant data, it drastically reduces compute costs and query times.</p>
+            </div>
+        </article>
+
+        <footer style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 2rem 0; border-top: 1px solid var(--card-border);">
+            End of Study Guide • You reached the bottom of the feed.
+        </footer>
+
+    </div>
+
+</body>
+</html>

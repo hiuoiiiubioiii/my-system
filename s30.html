@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Chain Replication & CRAQ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background for feed contrast */
+        }
+
+        /* Feed container styles */
+        .feed-container {
+            max-w-3xl;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .feed-card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+            border-top: 5px solid #3b82f6; /* Blue accent */
+        }
+
+        .feed-card.craq {
+            border-top-color: #8b5cf6; /* Purple accent for CRAQ */
+        }
+
+        /* Visualization Node Styles */
+        .node-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            margin: 3rem 0;
+            padding: 0 1rem;
+        }
+
+        .node {
+            width: 80px;
+            height: 80px;
+            background-color: #e5e7eb;
+            border: 2px solid #9ca3af;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            z-index: 10;
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .node.head { background-color: #dbeafe; border-color: #3b82f6; }
+        .node.replica { background-color: #f3f4f6; border-color: #6b7280; }
+        .node.tail { background-color: #dcfce3; border-color: #22c55e; }
+        
+        .client-node {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #1f2937;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+            z-index: 10;
+        }
+
+        /* The connection line between nodes */
+        .line {
+            position: absolute;
+            top: 50%;
+            left: 50px;
+            right: 50px;
+            height: 4px;
+            background-color: #d1d5db;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        /* Animated Data Packet */
+        .packet {
+            position: absolute;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            transition: left 0.5s linear, background-color 0.3s ease;
+            display: none;
+        }
+        .packet.write { background-color: #ef4444; } /* Red for write */
+        .packet.ack { background-color: #22c55e; } /* Green for ACK */
+        .packet.read { background-color: #3b82f6; } /* Blue for Read */
+
+        /* CRAQ specific node details */
+        .craq-data {
+            font-size: 0.7rem;
+            margin-top: 5px;
+            color: #4b5563;
+            font-weight: normal;
+            line-height: 1.2;
+        }
+        .clean { color: #16a34a; font-weight: bold; }
+        .dirty { color: #ea580c; font-weight: bold; }
+
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-3xl mx-auto p-4 flex items-center justify-between">
+            <h1 class="text-xl font-bold text-gray-900"><i class="fas fa-book-open text-blue-500 mr-2"></i> Distributed Systems Notes</h1>
+            <span class="text-sm font-medium bg-blue-100 text-blue-800 py-1 px-3 rounded-full">Lecture 9</span>
+        </div>
+    </header>
+
+    <!-- Main Feed -->
+    <main class="feed-container max-w-3xl mx-auto">
+
+        <!-- Topic 1: Introduction -->
+        <article class="feed-card">
+            <h2 class="text-3xl font-bold mb-4">Chain Replication & CRAQ</h2>
+            <div class="prose prose-blue max-w-none">
+                <p class="text-lg"><strong>What is it?</strong> Chain Replication is a database replication scheme invented in 2004.</p>
+                <p><strong>The Goal:</strong> To achieve both <strong>Strong Consistency</strong> (linearizability) and <strong>High Availability</strong>, while still maintaining a decently high throughput.</p>
+                <div class="bg-gray-50 border-l-4 border-gray-400 p-4 my-4 italic">
+                    <strong>Instructor's Fun Fact:</strong> The paper for this architecture was actually written by the instructor's Operating Systems professor!
+                </div>
+                <p><strong>The Evolution:</strong> The original Chain Replication architecture was later modified into a system called <strong>CRAQ</strong> (Chain Replication with Apportioned Queries). CRAQ uses the exact same chain layout but drastically improves read speeds.</p>
+            </div>
+        </article>
+
+        <!-- Topic 2: Vanilla Writes -->
+        <article class="feed-card">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 p-2 rounded-lg mr-3"><i class="fas fa-pen text-blue-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">Vanilla Chain Replication: Writes</h2>
+            </div>
+            <p class="mb-4">Nodes are organized into a strict chain: a <strong>Head</strong>, middle <strong>Replicas</strong>, and a <strong>Tail</strong>.</p>
+            
+            <ol class="list-decimal list-inside space-y-2 mb-6">
+                <li>The Client sends a write request <em>only</em> to the Head node.</li>
+                <li>The Head passes the write to the next Replica, continuing down to the Tail.</li>
+                <li>Once the Tail receives it, the write is <strong>committed</strong>. The Tail passes an Acknowledgement (ACK) back up the chain.</li>
+                <li>When the Head gets the ACK, it tells the client the write was successful.</li>
+            </ol>
+
+            <!-- Visualization: Vanilla Write -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                <h3 class="text-center font-semibold text-gray-500 text-sm mb-2">LIVE VISUALIZATION: THE WRITE CYCLE</h3>
+                <div class="node-container" id="vanilla-write-container">
+                    <div class="line"></div>
+                    <div class="client-node" id="vw-client">Client</div>
+                    <div class="node head" id="vw-head">Head</div>
+                    <div class="node replica" id="vw-r1">Rep 1</div>
+                    <div class="node replica" id="vw-r2">Rep 2</div>
+                    <div class="node tail" id="vw-tail">Tail</div>
+                    <div class="packet write" id="vw-packet"></div>
+                </div>
+                <p id="vw-status" class="text-center text-sm font-medium text-red-500 h-5">Client sending write to Head...</p>
+            </div>
+        </article>
+
+        <!-- Topic 3: Vanilla Reads -->
+        <article class="feed-card">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 p-2 rounded-lg mr-3"><i class="fas fa-eye text-blue-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">Vanilla Chain Replication: Reads</h2>
+            </div>
+            <p class="mb-4 bg-yellow-50 p-4 border-l-4 border-yellow-400 rounded">
+                <strong>The Golden Rule:</strong> All read requests are made <em>only</em> from the Tail node.
+            </p>
+            <p><strong>Why?</strong> Because writes are only acknowledged as successful once they reach the Tail node. By forcing all clients to read from the Tail, the system guarantees <strong>Strong Consistency</strong>. You will never read stale or uncommitted data because the Tail is the ultimate source of truth.</p>
+        </article>
+
+        <!-- Topic 4: Failover -->
+        <article class="feed-card">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 p-2 rounded-lg mr-3"><i class="fas fa-heartbeat text-blue-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">Handling Node Failures (Failover)</h2>
+            </div>
+            <p class="mb-4">The system uses an external coordination service (like <strong>ZooKeeper</strong>) running a consensus algorithm to monitor node health, avoiding split-brain scenarios common in gossip protocols.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h3 class="font-bold text-red-700 mb-2">1. Head Fails</h3>
+                    <p class="text-sm">Promote the next replica to Head. May lose uncommitted writes from the old head, but the client will safely retry since they never got an ACK.</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <h3 class="font-bold text-green-700 mb-2">2. Tail Fails</h3>
+                    <p class="text-sm">Promote the replica right behind it to be the new Tail. Zero data loss, as this node contains all committed data.</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <h3 class="font-bold text-orange-700 mb-2">3. Middle Fails</h3>
+                    <p class="text-sm">Remove from chain. The predecessor node updates to point to the successor node and passes any unacknowledged writes to bridge the gap.</p>
+                </div>
+            </div>
+        </article>
+
+        <!-- Topic 5: Analysis -->
+        <article class="feed-card">
+            <div class="flex items-center mb-4">
+                <div class="bg-blue-100 p-2 rounded-lg mr-3"><i class="fas fa-balance-scale text-blue-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">Analysis of Vanilla Chain Replication</h2>
+            </div>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1">
+                    <h3 class="font-bold text-green-600 mb-3"><i class="fas fa-check-circle mr-2"></i>Pros</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li><strong>Strong Consistency:</strong> Achieved via total ordering of writes.</li>
+                        <li><strong>Cheap Writes:</strong> Unlike single-leader (Raft/Paxos) where the leader messages <em>all</em> nodes at once, the Head only messages <em>one</em> node. Prevents Head overload.</li>
+                    </ul>
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-red-600 mb-3"><i class="fas fa-times-circle mr-2"></i>Cons</h3>
+                    <ul class="list-disc list-inside space-y-2 text-sm">
+                        <li><strong>Read Bottleneck:</strong> Read throughput is limited to exactly one node (the Tail) unless database is sharded.</li>
+                        <li><strong>Write Bottleneck:</strong> The chain is only as fast as its slowest link. One slow middle node cripples the entire write speed.</li>
+                    </ul>
+                </div>
+            </div>
+        </article>
+
+        <!-- Topic 6: CRAQ Writes -->
+        <article class="feed-card craq">
+            <div class="flex items-center mb-4">
+                <div class="bg-purple-100 p-2 rounded-lg mr-3"><i class="fas fa-bolt text-purple-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">CRAQ: Fixing the Read Bottleneck</h2>
+            </div>
+            <p class="mb-4"><strong>CRAQ</strong> modifies the system to allow read queries from <em>any</em> node while keeping strong consistency. It adds two variables to the data:</p>
+            <ul class="list-disc list-inside mb-6 font-mono text-sm bg-gray-100 p-3 rounded">
+                <li><strong>Version Number:</strong> Increments with each write.</li>
+                <li><strong>State:</strong> Either <span class="clean">Clean</span> (committed by Tail) or <span class="dirty">Dirty</span> (uncommitted, waiting for ACK).</li>
+            </ul>
+
+            <h3 class="font-bold mb-2">How CRAQ Writes Work:</h3>
+            <ol class="list-decimal list-inside space-y-2 mb-6 text-sm">
+                <li>Client writes a new value. Head increments version and marks it <strong>Dirty</strong>.</li>
+                <li>The Dirty write propagates down the chain.</li>
+                <li>Once the Tail receives it, it is committed! Tail saves it as <strong>Clean</strong>.</li>
+                <li>Tail sends ACKs backward. As nodes get the ACK, they switch local state from Dirty to <strong>Clean</strong> and delete old versions.</li>
+            </ol>
+
+            <!-- Visualization: CRAQ Write -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-purple-200">
+                <h3 class="text-center font-semibold text-purple-600 text-sm mb-2">LIVE VISUALIZATION: CRAQ STATE CHANGES</h3>
+                <p class="text-center text-xs text-gray-500 mb-6">Writing key 'jordan', value 'hot' over old value 'sexy'</p>
+                <div class="node-container" id="craq-write-container">
+                    <div class="line"></div>
+                    <div class="node head" id="cw-head">Head<div class="craq-data" id="cwd-head">sexy, 1, <span class="clean">clean</span></div></div>
+                    <div class="node replica" id="cw-r1">Rep 1<div class="craq-data" id="cwd-r1">sexy, 1, <span class="clean">clean</span></div></div>
+                    <div class="node replica" id="cw-r2">Rep 2<div class="craq-data" id="cwd-r2">sexy, 1, <span class="clean">clean</span></div></div>
+                    <div class="node tail" id="cw-tail">Tail<div class="craq-data" id="cwd-tail">sexy, 1, <span class="clean">clean</span></div></div>
+                </div>
+                <p id="cw-status" class="text-center text-sm font-medium text-purple-600 h-5 mt-4">System in consistent state.</p>
+            </div>
+        </article>
+
+        <!-- Topic 7: CRAQ Reads -->
+        <article class="feed-card craq">
+            <div class="flex items-center mb-4">
+                <div class="bg-purple-100 p-2 rounded-lg mr-3"><i class="fas fa-search text-purple-600 text-xl"></i></div>
+                <h2 class="text-2xl font-bold">CRAQ Reads: The Tricky Part</h2>
+            </div>
+            <p class="mb-4">Clients can now query <em>any</em> node. The node checks its internal state to decide how to answer:</p>
+            
+            <div class="space-y-4">
+                <div class="p-4 border border-green-200 rounded-lg bg-green-50">
+                    <h3 class="font-bold text-green-800"><i class="fas fa-check mr-2"></i>Scenario 1: Data is Clean</h3>
+                    <p class="text-sm">If the client asks for data and the replica's highest version is labeled <strong>Clean</strong>, the replica safely returns the value immediately.</p>
+                </div>
+
+                <div class="p-4 border border-orange-200 rounded-lg bg-orange-50">
+                    <h3 class="font-bold text-orange-800"><i class="fas fa-exclamation-triangle mr-2"></i>Scenario 2: Data is Dirty</h3>
+                    <p class="text-sm mb-3">If the highest version is labeled <strong>Dirty</strong>, the replica <em>doesn't know</em> if the Tail has committed it yet. Returning it could break Strong Consistency.</p>
+                    <div class="bg-white p-3 rounded border border-orange-100 text-sm">
+                        <strong>The Solution:</strong> The replica pauses and sends a tiny network request to the Tail asking: <em>"What is the current committed version number?"</em> The Tail answers, and the replica returns that specific version's value to the client.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization: CRAQ Read Dirty -->
+            <div class="bg-gray-50 p-6 rounded-lg border border-purple-200 mt-6 overflow-hidden">
+                <h3 class="text-center font-semibold text-purple-600 text-sm mb-2">LIVE VISUALIZATION: DIRTY READ RESOLUTION</h3>
+                <div class="node-container h-32" id="craq-read-container">
+                    <div class="client-node absolute left-0" id="cr-client">Client</div>
+                    <div class="node replica absolute left-1/3" id="cr-rep">Rep 2<div class="craq-data">hot, 2, <span class="dirty">dirty</span></div></div>
+                    <div class="node tail absolute right-0" id="cr-tail">Tail<div class="craq-data">hot, 2, <span class="clean">clean</span></div></div>
+                    <div class="packet read" id="cr-packet"></div>
+                </div>
+                <p id="cr-status" class="text-center text-sm font-medium text-blue-600 h-5 mt-2">Client requests read from middle replica.</p>
+            </div>
+        </article>
+
+        <!-- Topic 8: Conclusion -->
+        <article class="feed-card bg-gray-800 text-white border-top-0">
+            <h2 class="text-2xl font-bold mb-4 text-white"><i class="fas fa-graduation-cap mr-2 text-yellow-400"></i> Final Evaluation & Interview Tip</h2>
+            
+            <p class="mb-4 text-gray-300"><strong>Why CRAQ scales:</strong> In read-heavy workloads, most reads hit "Clean" data, meaning read throughput scales linearly with the number of replicas. Even when dirty, asking the Tail for a tiny integer (version number) is way faster/cheaper over the network than having the Tail send the actual file/data payload to the client.</p>
+
+            <p class="mb-6 text-gray-300"><em>Note: CRAQ still suffers from the write bottleneck (one slow node slows all writes).</em></p>
+            
+            <div class="bg-yellow-500 text-gray-900 p-4 rounded-lg">
+                <h3 class="font-bold text-lg mb-1">💡 Systems Design Interview Tip</h3>
+                <p class="text-sm">Chain Replication and CRAQ aren't the most common architectures, but they are incredible aces up your sleeve. If an interviewer asks you to design a system needing <strong>Strong Consistency</strong> while <strong>minimizing the network load on the leader node</strong>, explaining Chain Replication will make you look highly knowledgeable and stand out.</p>
+            </div>
+        </article>
+
+    </main>
+
+    <footer class="text-center py-8 text-gray-500 text-sm">
+        <p>End of Lecture Feed</p>
+    </footer>
+
+    <!-- JavaScript for Animations -->
+    <script>
+        // Utilities to help with absolute positioning animations
+        function getLeftPos(element, container) {
+            return element.getBoundingClientRect().left - container.getBoundingClientRect().left;
+        }
+
+        /* -----------------------------------------------------------------
+           ANIMATION 1: Vanilla Chain Replication Writes
+           Flow: Client -> Head -> R1 -> R2 -> Tail -> R2 -> R1 -> Head -> Client
+        ----------------------------------------------------------------- */
+        const vwContainer = document.getElementById('vanilla-write-container');
+        const vwPacket = document.getElementById('vw-packet');
+        const vwStatus = document.getElementById('vw-status');
+        const vwNodes = [
+            document.getElementById('vw-client'),
+            document.getElementById('vw-head'),
+            document.getElementById('vw-r1'),
+            document.getElementById('vw-r2'),
+            document.getElementById('vw-tail')
+        ];
+
+        async function runVanillaWriteAnim() {
+            vwPacket.style.display = 'block';
+            vwPacket.className = 'packet write';
+            vwPacket.style.left = getLeftPos(vwNodes[0], vwContainer) + 30 + 'px';
+            vwStatus.innerText = "Client sending write request...";
+            vwStatus.className = "text-center text-sm font-medium text-red-500 h-5";
+
+            // Propagate forward (Write)
+            for(let i=1; i<vwNodes.length; i++) {
+                await new Promise(r => setTimeout(r, 600));
+                vwPacket.style.left = getLeftPos(vwNodes[i], vwContainer) + 30 + 'px';
+                if(i === vwNodes.length -1) {
+                    vwStatus.innerText = "Tail commits write. Sending ACK backward...";
+                } else {
+                    vwStatus.innerText = `Propagating write to ${vwNodes[i].innerText}...`;
+                }
+            }
+
+            // Change to ACK
+            await new Promise(r => setTimeout(r, 600));
+            vwPacket.className = 'packet ack';
+            vwStatus.className = "text-center text-sm font-medium text-green-500 h-5";
+
+            // Propagate backward (ACK)
+            for(let i=vwNodes.length-2; i>=0; i--) {
+                await new Promise(r => setTimeout(r, 600));
+                vwPacket.style.left = getLeftPos(vwNodes[i], vwContainer) + 30 + 'px';
+                if(i === 0) {
+                    vwStatus.innerText = "Client alerted of success!";
+                } else {
+                    vwStatus.innerText = `ACK passing back to ${vwNodes[i].innerText}...`;
+                }
+            }
+
+            await new Promise(r => setTimeout(r, 1500));
+            vwPacket.style.display = 'none';
+            setTimeout(runVanillaWriteAnim, 1000); // Loop
+        }
+
+
+        /* -----------------------------------------------------------------
+           ANIMATION 2: CRAQ Writes (State Changes)
+        ----------------------------------------------------------------- */
+        const cwData = [
+            document.getElementById('cwd-head'),
+            document.getElementById('cwd-r1'),
+            document.getElementById('cwd-r2'),
+            document.getElementById('cwd-tail')
+        ];
+        const cwStatus = document.getElementById('cw-status');
+
+        const stateClean1 = 'sexy, 1, <span class="clean">clean</span>';
+        const stateDirty2 = 'hot, 2, <span class="dirty">dirty</span>';
+        const stateClean2 = 'hot, 2, <span class="clean">clean</span>';
+
+        async function runCRAQWriteAnim() {
+            // Reset
+            cwData.forEach(el => el.innerHTML = stateClean1);
+            cwStatus.innerText = "System starts in a consistent state.";
+            await new Promise(r => setTimeout(r, 2000));
+
+            cwStatus.innerText = "Client writes 'hot'. Head marks Dirty.";
+            cwData[0].innerHTML = stateDirty2;
+            await new Promise(r => setTimeout(r, 1000));
+
+            cwStatus.innerText = "Write propagates down chain...";
+            cwData[1].innerHTML = stateDirty2;
+            await new Promise(r => setTimeout(r, 800));
+            cwData[2].innerHTML = stateDirty2;
+            await new Promise(r => setTimeout(r, 800));
+
+            cwStatus.innerText = "Tail receives write! Commits as Clean.";
+            cwData[3].innerHTML = stateClean2;
+            await new Promise(r => setTimeout(r, 1500));
+
+            cwStatus.innerText = "Tail sends ACKs back. Nodes mark as Clean.";
+            cwData[2].innerHTML = stateClean2;
+            await new Promise(r => setTimeout(r, 800));
+            cwData[1].innerHTML = stateClean2;
+            await new Promise(r => setTimeout(r, 800));
+            cwData[0].innerHTML = stateClean2;
+            
+            cwStatus.innerText = "Write complete. Fully consistent.";
+            await new Promise(r => setTimeout(r, 3000));
+            
+            runCRAQWriteAnim(); // Loop
+        }
+
+
+        /* -----------------------------------------------------------------
+           ANIMATION 3: CRAQ Read (Dirty State)
+        ----------------------------------------------------------------- */
+        const crContainer = document.getElementById('craq-read-container');
+        const crPacket = document.getElementById('cr-packet');
+        const crStatus = document.getElementById('cr-status');
+        const crNodes = {
+            client: document.getElementById('cr-client'),
+            rep: document.getElementById('cr-rep'),
+            tail: document.getElementById('cr-tail')
+        };
+
+        async function runCRAQReadAnim() {
+            crPacket.style.display = 'block';
+            crPacket.className = 'packet read';
+            crPacket.style.left = getLeftPos(crNodes.client, crContainer) + 30 + 'px';
+            crStatus.innerText = "Client sends read request to Replica 2...";
+            
+            // Client to Rep
+            await new Promise(r => setTimeout(r, 800));
+            crPacket.style.left = getLeftPos(crNodes.rep, crContainer) + 30 + 'px';
+            
+            // Rep realizes dirty
+            await new Promise(r => setTimeout(r, 800));
+            crStatus.innerText = "Replica is 'Dirty'. Asking Tail for version...";
+            crPacket.className = 'packet write'; // Turn red for internal question
+            
+            // Rep to Tail
+            await new Promise(r => setTimeout(r, 800));
+            crPacket.style.left = getLeftPos(crNodes.tail, crContainer) + 30 + 'px';
+            
+            // Tail responds
+            await new Promise(r => setTimeout(r, 1000));
+            crStatus.innerText = "Tail confirms version 2 is clean. Sending back.";
+            crPacket.className = 'packet ack'; // Turn green for response
+            
+            // Tail to Rep
+            await new Promise(r => setTimeout(r, 800));
+            crPacket.style.left = getLeftPos(crNodes.rep, crContainer) + 30 + 'px';
+            
+            // Rep to Client
+            await new Promise(r => setTimeout(r, 800));
+            crStatus.innerText = "Replica safely returns version 2 data to Client.";
+            crPacket.className = 'packet read';
+            crPacket.style.left = getLeftPos(crNodes.client, crContainer) + 30 + 'px';
+
+            await new Promise(r => setTimeout(r, 2000));
+            crPacket.style.display = 'none';
+            setTimeout(runCRAQReadAnim, 1000); // loop
+        }
+
+        // Initialize animations after a short delay to allow layout to settle
+        setTimeout(() => {
+            runVanillaWriteAnim();
+            runCRAQWriteAnim();
+            runCRAQReadAnim();
+        }, 500);
+
+    </script>
+</body>
+</html>

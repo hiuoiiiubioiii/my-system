@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choosing a Database - Systems Design Study Guide</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #0f1115;
+            --card-bg: #1a1d24;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #34d399;
+            --accent-red: #fb7185;
+            --accent-purple: #c084fc;
+            --accent-yellow: #facc15;
+            --border-color: #334155;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(to bottom, #1e293b, var(--bg-color));
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+            background: rgba(15, 17, 21, 0.85);
+        }
+
+        h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 10px; background: -webkit-linear-gradient(var(--accent-blue), var(--accent-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+        header p { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
+
+        .feed-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 40px;
+            border-left: 6px solid var(--accent-blue);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover { transform: translateY(-2px); }
+
+        .card h2 { font-size: 1.8rem; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .card h3 { font-size: 1.3rem; margin: 25px 0 10px 0; color: var(--text-muted); }
+        .card ul { margin-left: 20px; margin-bottom: 20px; }
+        .card li { margin-bottom: 10px; }
+        .card p { margin-bottom: 15px; }
+
+        /* Specific Card Accents */
+        .card.concept { border-left-color: var(--accent-blue); }
+        .card.sql { border-left-color: var(--accent-green); }
+        .card.nosql { border-left-color: var(--accent-purple); }
+        .card.kv { border-left-color: var(--accent-yellow); }
+        .card.graph { border-left-color: var(--accent-red); }
+
+        /* Tags */
+        .tag-pro { color: var(--accent-green); font-weight: bold; }
+        .tag-con { color: var(--accent-red); font-weight: bold; }
+        .tag-key { color: var(--accent-yellow); font-weight: bold; }
+        .tag-use { color: var(--accent-blue); font-weight: bold; }
+
+        /* Visualizations */
+        .visual-box {
+            background: #0f1115;
+            border: 2px dashed #334155;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 25px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-blue);
+            overflow-x: auto;
+        }
+
+        .viz-row { display: flex; gap: 15px; margin-bottom: 15px; justify-content: center; width: 100%;}
+        .viz-node { background: #1e293b; border: 1px solid #475569; padding: 10px 20px; border-radius: 8px; text-align: center; }
+        .viz-arrow { display: flex; align-items: center; color: var(--text-muted); }
+        .viz-arrow-down { text-align: center; color: var(--text-muted); margin: 5px 0; }
+        
+        .viz-table { border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; }
+        .viz-table td, .viz-table th { border: 1px solid #334155; padding: 8px 15px; text-align: center; }
+        .viz-table th { background: #334155; color: white; }
+
+        .conclusion-box {
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Systems Design: Choosing a Database</h1>
+        <p>A continuous vertical feed study guide. Scroll down to master database indexing, replication, and the exact use-cases for SQL, NoSQL, Graph, and Time-Series databases.</p>
+    </header>
+
+    <div class="feed-container">
+
+        <!-- CORE CONCEPT: INDEXES -->
+        <article class="card concept">
+            <h2>1. Background: Database Indexes</h2>
+            <p>A database index speeds up reads conditioned on a specific key. <strong>Trade-off:</strong> Never overuse indexes, as updating the index slows down database writes.</p>
+            
+            <h3>A. LSM Trees + SSTables (Log-Structured Merge-Tree)</h3>
+            <ul>
+                <li><strong>Writes:</strong> Go straight to an in-memory balanced binary search tree (very fast).</li>
+                <li><strong>Flushing:</strong> When the tree gets too big, it is flushed to the disk as a sorted file called an SSTable.</li>
+                <li><strong>Compaction:</strong> Background processes merge multiple SSTables together, discarding old/overwritten values of keys.</li>
+                <li><strong>Reads:</strong> Checks memory first, then binary searches through the on-disk SSTables.</li>
+            </ul>
+            <div class="visual-box">
+                <div class="viz-node" style="border-color: var(--accent-green)">In-Memory Balanced Tree<br>(Lightning Fast Writes)</div>
+                <div class="viz-arrow-down">⬇️ Flushes to disk when full ⬇️</div>
+                <div class="viz-row">
+                    <div class="viz-node">SSTable 1 (Newest)<br>[A:1] [B:2] [C:5]</div>
+                    <div class="viz-node">SSTable 2 (Older)<br>[B:1] [D:9]</div>
+                </div>
+                <div class="viz-arrow-down">Reads search newest to oldest. Compaction merges them.</div>
+            </div>
+            <p><span class="tag-pro">Pro:</span> Extremely fast writes (writing to memory).<br>
+               <span class="tag-con">Con:</span> Slower reads (may have to search multiple SSTables).</p>
+
+            <h3>B. B-Trees</h3>
+            <ul>
+                <li>A binary tree data structure implemented using physical pointers directly on the disk.</li>
+                <li><strong>Writes:</strong> Iterates through the tree on disk, overwriting the existing key value OR creating a new page on disk and updating the parent pointer.</li>
+            </ul>
+            <div class="visual-box">
+                <div class="viz-node">Root Page (Disk)</div>
+                <div class="viz-arrow-down">↙️ Pointer &nbsp;&nbsp;&nbsp; Pointer ↘️</div>
+                <div class="viz-row">
+                    <div class="viz-node">Page 1</div>
+                    <div class="viz-node">Page 2</div>
+                </div>
+            </div>
+            <p><span class="tag-pro">Pro:</span> Faster reads (you know exactly where the key is located).<br>
+               <span class="tag-con">Con:</span> Slow writes (manipulating pointers and pages on disk, not memory).</p>
+        </article>
+
+        <!-- CORE CONCEPT: REPLICATION -->
+        <article class="card concept">
+            <h2>2. Background: Replication</h2>
+            <p>Replication is copying data across multiple nodes so if a database goes down, data isn't lost.</p>
+            
+            <h3>Types of Replication</h3>
+            <ul>
+                <li><strong>Single Leader:</strong> All writes go to ONE master node. Reads can come from any node.<br>
+                    <span class="tag-use">Use when:</span> You need to ensure absolutely zero write/data conflicts.
+                </li>
+                <li><strong>Leaderless / Multi-Leader:</strong> Writes can go to all (or a subset of) nodes. Reads pull from all nodes to find the newest data.<br>
+                    <span class="tag-use">Use when:</span> You need massive write throughput that a single node can't handle. <span class="warning">Cost: Potential write conflicts.</span>
+                </li>
+            </ul>
+        </article>
+
+        <!-- SQL -->
+        <article class="card sql">
+            <h2>3. SQL Databases (Postgres, MySQL)</h2>
+            <p>The traditional standard prioritizing strict correctness over raw distributed speed.</p>
+            <ul>
+                <li><strong>Data Model:</strong> Relational/Normalized. Changes to one table usually require changes to others (e.g., adding an Author and Books to different tables).</li>
+                <li><strong>ACID Transactions:</strong> Guarantees operations fully complete or fully fail.</li>
+                <li><strong>The Distributed Problem:</strong> If normalized tables live on different nodes, maintaining ACID requires a <strong>Two-Phase Commit</strong>. This locks databases to ensure agreement, which is incredibly slow.</li>
+                <li><strong>Under the hood:</strong> Typically uses B-Trees.</li>
+            </ul>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Use SQL when <strong>correctness is more important than speed</strong>.<br>
+                <strong><span class="tag-use">See:</span></strong> Banking applications, job scheduling.
+            </div>
+        </article>
+
+        <!-- MONGODB -->
+        <article class="card nosql">
+            <h2>4. MongoDB (Document NoSQL)</h2>
+            <ul>
+                <li><strong>Data Model:</strong> Document data model. Data is written in large, nested JSON-like documents (Denormalized).</li>
+                <li><strong>Advantage:</strong> Better <em>data locality</em>. If an Author and their Books are in one document, the disk head only reads one location.</li>
+                <li><strong>Under the hood:</strong> Still supports B-Trees and Transactions.</li>
+            </ul>
+            <div class="visual-box">
+                <div style="text-align: left; width: 100%;">
+<pre>
+{
+  "_id": "user_123",
+  "name": "John Doe",
+  "books_written": [
+    { "title": "System Design", "year": 2024 },
+    { "title": "Databases", "year": 2025 }
+  ]
+}
+</pre>
+                </div>
+            </div>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Rarely the "special" answer in an interview. Good if you want SQL-like guarantees but need more schema flexibility.
+            </div>
+        </article>
+
+        <!-- WIDE COLUMN: CASSANDRA -->
+        <article class="card nosql">
+            <h2>5. Apache Cassandra (Wide Column)</h2>
+            <p>The heavyweight champion of massive write throughput.</p>
+            <ul>
+                <li><strong>Data Model:</strong> Wide column store. Has a <em>shard key</em> (for partitioning) and a <em>sort key</em>.</li>
+                <li><strong>Replication:</strong> Configurable Multileader/Leaderless.</li>
+                <li><strong>Index:</strong> Uses LSM Trees and SSTables (Lightning fast writes to memory).</li>
+                <li><span class="warning">Conflict Resolution:</span> Uses <strong>Last Write Wins (LWW)</strong> based on timestamps. If clocks are desynced, it might accidentally clobber (overwrite) a newer, valid write!</li>
+            </ul>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Great for applications with <strong>extreme write volume</strong> where strict consistency isn't critical. All writes/reads go to the same shard (no cross-node transactions).<br>
+                <strong><span class="tag-use">See:</span></strong> Chat Applications (Facebook Messenger), where losing 1 out of 10,000 messages isn't a system failure.
+            </div>
+        </article>
+
+        <!-- WIDE COLUMN: RIAK -->
+        <article class="card nosql">
+            <h2>6. Riak (Wide Column)</h2>
+            <p>Very similar to Cassandra (Wide column, Leaderless, LSM Trees), but fixes the "Last Write Wins" data loss issue.</p>
+            <ul>
+                <li><strong>The Difference:</strong> Supports <strong>CRDTs (Conflict-Free Replicated Data Types)</strong>.</li>
+                <li>Instead of simply overwriting data based on a timestamp, CRDTs provide custom logic to mathematically merge conflicts without losing data.</li>
+            </ul>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Similar use case to Cassandra, but specifically better when you need to implement <strong>distributed counters or sets</strong> (like counting Facebook "Likes") in a conflict-free way.
+            </div>
+        </article>
+
+        <!-- WIDE COLUMN: HBASE -->
+        <article class="card nosql">
+            <h2>7. Apache HBase (Wide Column)</h2>
+            <p>Another wide column store, but prioritizes read speed for specific data attributes.</p>
+            <ul>
+                <li><strong>Replication:</strong> Single leader replication (Built on Hadoop/HDFS). Slower writes than Cassandra, but ensures data consistency/durability.</li>
+                <li><strong>Index:</strong> LSM Trees + SSTables.</li>
+                <li><strong><span class="tag-key">Superpower:</span> Column-Oriented Storage.</strong> Stores data by column on disk instead of by row.</li>
+            </ul>
+            <div class="visual-box">
+                <p style="margin-bottom: 10px; color: var(--text-muted);">Row-Oriented (Disk reads full rows)</p>
+                <div class="viz-row">
+                    <div class="viz-node">[ID|Name|Thumbnail]</div> <div class="viz-node">[ID|Name|Thumbnail]</div>
+                </div>
+                <p style="margin-bottom: 10px; margin-top: 15px; color: var(--accent-green);">Column-Oriented (Disk reads only what you need)</p>
+                <div class="viz-row">
+                    <div class="viz-node">[ID|ID|ID]</div> <div class="viz-node">[Name|Name|Name]</div> <div class="viz-node" style="border-color: var(--accent-green)">[Thumb|Thumb|Thumb]</div>
+                </div>
+            </div>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Great for applications that need <strong>fast column reads</strong> and high column compression (increased data locality).<br>
+                <strong><span class="tag-use">See:</span></strong> Fetching multiple thumbnails for a YouTube homepage, bulk reading sensor readings.
+            </div>
+        </article>
+
+        <!-- KEY VALUE: REDIS -->
+        <article class="card kv">
+            <h2>8. Memcached and Redis (In-Memory)</h2>
+            <p>Key-value stores implemented entirely in RAM (Memory).</p>
+            <ul>
+                <li><strong>Under the hood:</strong> Uses a standard Hashmap. Lookups are O(1).</li>
+                <li>Redis is generally preferred over Memcached as it is more feature-rich (supports geospatial indexes, sorted sets, etc.).</li>
+                <li><strong>Drawback:</strong> Memory is very expensive compared to hard drives, limiting this to smaller datasets.</li>
+            </ul>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Useful for data that must be written and retrieved <strong>extremely quickly</strong>.<br>
+                <strong><span class="tag-use">See:</span></strong> Caching layers, Geospatial indexes for Uber/Lyft (where driver coordinates update constantly and must be read instantly).
+            </div>
+        </article>
+
+        <!-- GRAPH: NEO4J -->
+        <article class="card graph">
+            <h2>9. Neo4j (Graph Database)</h2>
+            <p>Built specifically for relationships.</p>
+            <ul>
+                <li><strong>The SQL Problem:</strong> If you use SQL to map relationships (many-to-many), every "hop" to a friend requires searching a B-Tree index <strong>O(log N)</strong>. Deep queries ("friends of friends of friends") become devastatingly slow.</li>
+                <li><strong>The Graph Solution:</strong> Neo4j uses <strong>direct pointers on disk</strong>. The data address of "User A" literally contains a direct memory pointer to "User B". Lookups are <strong>O(1)</strong>.</li>
+            </ul>
+            <div class="visual-box">
+                <div class="viz-row">
+                    <div class="viz-node" style="border-radius: 50%;">Node: Alice<br>Disk: 0x1A</div>
+                    <div class="viz-arrow">━━━ O(1) Pointer ━━━▶</div>
+                    <div class="viz-node" style="border-radius: 50%;">Node: Bob<br>Disk: 0x2B</div>
+                </div>
+            </div>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Only useful for data naturally represented in graph formats.<br>
+                <strong><span class="tag-use">See:</span></strong> Map routing data, Friends/Connections on social media.
+            </div>
+        </article>
+
+        <!-- TIME SERIES -->
+        <article class="card concept">
+            <h2>10. TimeScaleDB / Apache Druid (Time-Series)</h2>
+            <p>Niche databases strictly designed for time-stamped streams of data.</p>
+            <ul>
+                <li><strong>Under the hood:</strong> Uses LSM trees for fast ingestion.</li>
+                <li><strong>The Optimization:</strong> Instead of one giant index, it breaks tables into <strong>many small indexes</strong> chunked by ingestion source and timestamp.</li>
+                <li>Because they are small, entire index chunks can be placed in the CPU Cache for extreme performance.</li>
+                <li><strong>Deletes:</strong> Standard databases use "tombstones" to mark deleted data (slow). Time-series databases can just instantly delete the entire small index chunk when the time range is no longer relevant.</li>
+            </ul>
+            <div class="conclusion-box">
+                <strong><span class="tag-key">Conclusion:</span></strong> Very niche but serve their purpose perfectly.<br>
+                <strong><span class="tag-use">See:</span></strong> Sensor data, system metrics, server logs (where you query by ingestor and a range of timestamps).
+            </div>
+        </article>
+
+        <!-- NEW SQL -->
+        <article class="card sql">
+            <h2>11. "New SQL" (Advanced / Theoretical)</h2>
+            <p>Attempts to solve the slowness of traditional distributed SQL databases. (Great to mention in interviews, but usually too expensive to actually implement).</p>
+            <ul>
+                <li><strong>VoltDB:</strong> SQL, but runs completely in-memory using <strong>single-threaded execution</strong>. Because there is only one thread, there are zero race conditions, eliminating the need for slow locking protocols. Very fast, but expensive and limited to small datasets.</li>
+                <li><strong>Google Spanner:</strong> Globally distributed SQL. It physically installs GPS and atomic clocks in datacenters to assign undeniable, exact timestamps to determine the order of writes. This bypasses the need for distributed locking. Incredibly expensive.</li>
+            </ul>
+        </article>
+
+    </div>
+
+</body>
+</html>

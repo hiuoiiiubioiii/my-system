@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apache Flink: Comprehensive Study Notes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #e65100; /* Flink Orange */
+            --primary-light: #ff833a;
+            --text-main: #1c1e21;
+            --text-muted: #606770;
+            --border: #dadde1;
+            --code-bg: #282a36;
+            --code-text: #f8f8f2;
+            
+            /* Diagram Colors */
+            --node-bg: #e3f2fd;
+            --node-border: #2196f3;
+            --db-bg: #fff9c4;
+            --db-border: #fbc02d;
+            --broker-bg: #e8f5e9;
+            --broker-border: #4caf50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Vertical Feed Layout Container */
+        #feed-container {
+            width: 100%;
+            max-width: 800px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(230, 81, 0, 0.2);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Feed Cards */
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .card h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .card h3 {
+            margin-top: 25px;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+            color: #333;
+        }
+
+        .card p, .card li {
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .card ul {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card strong {
+            color: var(--primary);
+        }
+
+        .highlight-box {
+            background-color: #fff3e0;
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* Data Visualizations (CSS Drawings) */
+        .visualization {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 30px 20px;
+            margin: 25px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: auto;
+        }
+
+        .vis-title {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        /* Flex & Grid Utilities for Diagrams */
+        .flex-row { display: flex; gap: 20px; align-items: center; justify-content: center; width: 100%;}
+        .flex-col { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+        
+        /* Specific Diagram Elements */
+        .diagram-box {
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .source-sink { background: var(--db-bg); border: 2px solid var(--db-border); }
+        .flink-node { background: var(--node-bg); border: 2px solid var(--node-border); position: relative;}
+        .broker { background: var(--broker-bg); border: 2px solid var(--broker-border); }
+        .manager { background: #f3e5f5; border: 2px solid #ab47bc; }
+        
+        .arrow {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+
+        /* State Cylinder inside node */
+        .state-cylinder {
+            width: 40px;
+            height: 50px;
+            background: #bbdefb;
+            border: 1px solid #1976d2;
+            border-radius: 50% / 15%;
+            margin: 10px auto 0 auto;
+            position: relative;
+        }
+        .state-cylinder::before {
+            content: "";
+            position: absolute;
+            top: 0; left: -1px; width: 100%; height: 15px;
+            background: #90caf9;
+            border: 1px solid #1976d2;
+            border-radius: 50%;
+        }
+
+        /* Log / Checkpoint Array Visualization */
+        .log-queue {
+            display: flex;
+            background: white;
+            border: 2px solid #333;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .log-cell {
+            padding: 10px 15px;
+            border-right: 1px solid #ccc;
+            font-family: 'Fira Code', monospace;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .log-cell:last-child { border-right: none; }
+        .log-index { font-size: 0.7rem; color: var(--text-muted); margin-bottom: 5px;}
+        .barrier {
+            background-color: #f44336;
+            color: white;
+            border-right: 2px solid #b71c1c;
+            border-left: 2px solid #b71c1c;
+        }
+
+        /* Cluster Grid */
+        .cluster-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            background: rgba(33, 150, 243, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed var(--node-border);
+        }
+
+    </style>
+</head>
+<body>
+
+    <main id="feed-container">
+        
+        <header class="card visible">
+            <h1>Apache Flink</h1>
+            <p>Comprehensive Study Notes & Visualizations</p>
+        </header>
+
+        <!-- Topic 1: Background -->
+        <section class="card">
+            <h2>1. Background & Core Definition</h2>
+            <p><strong>What is Flink?</strong> Flink is a <strong>stream processing framework</strong>. It is software designed to be run on a cluster of nodes acting as consumers.</p>
+            
+            <div class="highlight-box">
+                <strong>Crucial Distinction:</strong> Flink is <em>not</em> a message broker (like Kafka or RabbitMQ). It relies on message brokers to provide the data stream, and Flink does the actual computation.
+            </div>
+
+            <h3>Key Features</h3>
+            <ul>
+                <li><strong>True Real-Time:</strong> Unlike Spark Streaming which uses "micro-batching" (waiting to gather a small chunk of messages before processing), Flink processes events continuously in true real-time as they arrive.</li>
+                <li><strong>Stateful Computations:</strong> It persists "state" (memory of past events) across the nodes in the cluster to perform meaningful aggregations or joins on incoming data.</li>
+            </ul>
+        </section>
+
+        <!-- Topic 2: Architecture Flow -->
+        <section class="card">
+            <h2>2. The Data Flow (Use Case Visualized)</h2>
+            <p>Flink sits between your data generation and your data storage/applications. It ingests data, performs complex parallel operations utilizing local state, and pushes the results outward.</p>
+            
+            <div class="visualization">
+                <div class="vis-title">System Architecture Flow</div>
+                <div class="flex-row">
+                    <div class="flex-col">
+                        <div class="diagram-box source-sink">Tx Logs</div>
+                        <div class="diagram-box source-sink">IoT Events</div>
+                    </div>
+                    
+                    <div class="arrow">→</div>
+                    
+                    <div class="cluster-grid">
+                        <div class="diagram-box flink-node">
+                            Task Node 1
+                            <div class="state-cylinder" title="Local State"></div>
+                        </div>
+                        <div class="diagram-box flink-node">
+                            Task Node 2
+                            <div class="state-cylinder" title="Local State"></div>
+                        </div>
+                        <div class="diagram-box flink-node">
+                            Task Node 3
+                            <div class="state-cylinder" title="Local State"></div>
+                        </div>
+                        <div class="diagram-box flink-node">
+                            Task Node 4
+                            <div class="state-cylinder" title="Local State"></div>
+                        </div>
+                    </div>
+
+                    <div class="arrow">→</div>
+
+                    <div class="flex-col">
+                        <div class="diagram-box source-sink">Application</div>
+                        <div class="diagram-box source-sink">Database (S3)</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic 3: State -->
+        <section class="card">
+            <h2>3. Why is "State" so Important?</h2>
+            <p>If streams are just continuous flows of independent events, why does Flink need to remember them (keep state)?</p>
+            <ul>
+                <li><strong>Grouping Events by Time (Windowing):</strong> Processing data like "Show me all clicks in the last 5 minutes". Flink holds events in state until the time window closes, then processes them together.</li>
+                <li><strong>Stream Enrichment:</strong> Flink can hold a local copy of a database table. When a minimal stream event arrives (e.g., just a UserID), Flink checks its local state table, enriches the event with demographic data, and passes it forward.</li>
+            </ul>
+
+            <div class="highlight-box">
+                <strong>The Tinder Example (Pattern Matching):</strong><br>
+                1. Every "swipe right" (like) is put into a stream. <br>
+                2. Flink processes the swipe and stores it in its <strong>local state</strong>. <br>
+                3. If a swipe comes in, and the <em>opposite</em> directional swipe is already sitting in the state memory, Flink declares a <strong>Match</strong>. <br>
+                4. Flink then forwards this match data into a second output stream.
+            </div>
+        </section>
+
+        <!-- Topic 4: Fault Tolerance -->
+        <section class="card">
+            <h2>4. Fault Tolerance</h2>
+            <p>Because Flink nodes store vital state locally (to process things quickly without querying a database every second), a node crash is dangerous. If a node dies, the state dies with it.</p>
+            <p><strong>The Solution:</strong> Flink occasionally takes <strong>Checkpoints</strong> of the local state on every node and saves them to durable, highly available distributed storage (like HDFS or AWS S3).</p>
+            <p>If a node crashes, Flink spins up a new node, pulls the last saved checkpoint from S3, and resumes processing the messages the node hadn't gotten to yet.</p>
+        </section>
+
+        <!-- Topic 5: Flink Architecture Deep Dive -->
+        <section class="card">
+            <h2>5. Flink Architecture: Parallelization</h2>
+            <p>To achieve high performance, Flink splits work up. Flink relies on a hierarchical structure to manage this:</p>
+            
+            <div class="visualization">
+                <div class="vis-title">Job Manager & Task Managers</div>
+                <div class="flex-col">
+                    <div class="diagram-box manager">
+                        <strong>Job Manager (The Boss)</strong><br>
+                        <span style="font-size:0.8rem; color:#666;">Translates code into Dataflow Graph<br>Initiates Checkpoints</span>
+                    </div>
+                    <div style="height: 20px; border-left: 2px dashed #ab47bc;"></div>
+                    <div class="flex-row">
+                        <div class="diagram-box flink-node">Task Manager<br><span style="font-size:0.7rem;">Executes Task</span></div>
+                        <div class="diagram-box flink-node">Task Manager<br><span style="font-size:0.7rem;">Executes Task</span></div>
+                        <div class="diagram-box flink-node">Task Manager<br><span style="font-size:0.7rem;">Executes Task</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <ul>
+                <li><strong>Single Job Manager Node:</strong> Takes your application code and automatically translates it into a parallelized "dataflow graph". It tells Task Managers what to do and initiates cluster-wide checkpoints.</li>
+                <li><strong>High Availability (HA):</strong> The Job Manager is a single point of failure. Flink uses a coordination service (like <strong>ZooKeeper</strong>) to track which nodes are alive. If the Job Manager dies, a standby node uses ZooKeeper to instantly take over.</li>
+                <li><strong>Task Managers:</strong> The worker nodes that actually execute the sub-tasks, process the data, and maintain local state.</li>
+            </ul>
+        </section>
+
+        <!-- Topic 6: Message Brokers -->
+        <section class="card">
+            <h2>6. Log-Based Message Brokers (Kafka)</h2>
+            <p>Flink is designed to consume data from log-based message brokers (like Apache Kafka). These are persistent, disk-based queues.</p>
+            
+            <p>Instead of deleting messages once read, the broker keeps them. Flink consumers keep track of an <strong>Offset</strong> (a specific index number). This allows Flink to "rewind" and replay messages if a node crashes.</p>
+
+            <div class="visualization">
+                <div class="vis-title">Anatomy of a Log-Based Topic</div>
+                <div class="log-queue" style="margin-bottom: 10px;">
+                    <div class="log-cell"><span class="log-index">0</span>Msg A</div>
+                    <div class="log-cell"><span class="log-index">1</span>Msg B</div>
+                    <div class="log-cell"><span class="log-index">2</span>Msg C</div>
+                    <div class="log-cell"><span class="log-index">3</span>Msg D</div>
+                    <div class="log-cell"><span class="log-index">4</span>Msg E</div>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">↑ Consumer tracks its offset (e.g., currently processed up to index 2)</p>
+            </div>
+        </section>
+
+        <!-- Topic 7: Checkpointing Mechanism -->
+        <section class="card">
+            <h2>7. Checkpointing Mechanism</h2>
+            <p>Flink uses the <strong>Chandy-Lamport algorithm</strong> for distributed snapshots, which is consistent with causality. Here is the step-by-step flow:</p>
+
+            <ol>
+                <li><strong>The Barrier:</strong> The Job Manager occasionally injects a special "Checkpoint Barrier" into the stream.</li>
+                <li><strong>In-Order Flow:</strong> Because log-based brokers deliver in order, the barrier flows through the stream just like a normal message.</li>
+                <li><strong>Snapshot:</strong> When a Task Manager receives the barrier, it pauses, notes its current <strong>broker offset</strong>, and saves its <strong>local state</strong> to HDFS/S3.</li>
+                <li><strong>Async Background:</strong> This snapshot is non-blocking. It happens in the background. The checkpoint is only considered successful when <em>all</em> nodes report to the Job Manager that they successfully saved their state.</li>
+            </ol>
+
+            <div class="visualization">
+                <div class="vis-title">Checkpoint Barrier in Data Stream</div>
+                <div class="log-queue">
+                    <div class="log-cell"><span class="log-index">Old</span>Event</div>
+                    <div class="log-cell"><span class="log-index">Old</span>Event</div>
+                    <div class="log-cell barrier"><strong>CHECKPOINT BARRIER</strong></div>
+                    <div class="log-cell"><span class="log-index">New</span>Event</div>
+                    <div class="log-cell"><span class="log-index">New</span>Event</div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <strong>Crash Recovery Consequence:</strong> If a crash happens, all nodes revert to the last successful checkpoint and resume from those saved offsets. Because some messages might have been processed between the checkpoint and the crash, reverting <strong>may result in certain messages being processed more than once</strong> (At-Least-Once processing). Developers must use idempotent operations or two-phase commits to ensure exactly-once semantics.
+            </div>
+        </section>
+
+        <!-- Topic 8: Changing Cluster Size -->
+        <section class="card">
+            <h2>8. Changing Cluster Size (Scaling)</h2>
+            <p>What happens when you add or remove nodes? Flink must redistribute the state.</p>
+            <p>Similar to consistent hashing, Flink aims to move as little state as possible over the network while balancing the load. To make this easy, <strong>Flink saves checkpoints as simple lists of Keys and Values</strong> (rather than complex monolithic objects representing the whole node). </p>
+            <p>By using lists of K/V pairs, Flink can easily slice and re-partition the state using range schemas when sending state to new nodes.</p>
+        </section>
+
+        <!-- Topic 9: Conclusion -->
+        <section class="card">
+            <h2>9. Conclusion: Flink vs. The Competition</h2>
+            <ul>
+                <li><strong>Vs. Spark Streaming:</strong> Spark processes in micro-batches (small time intervals). Flink is a fully real-time stream processing engine.</li>
+                <li><strong>Vs. Apache Storm / Samza:</strong> Older engines required you to manually build the dataflow graph and handle parallelization yourself. Flink automatically calculates the dataflow graph and parallelizes the work for the developer, significantly improving the developer experience.</li>
+            </ul>
+        </section>
+
+        <!-- Footer spacing -->
+        <div style="height: 40px;"></div>
+
+    </main>
+
+    <script>
+        // Intersection Observer for smooth scroll animations
+        document.addEventListener("DOMContentLoaded", function() {
+            const cards = document.querySelectorAll('.card');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.15 // Trigger when 15% of the card is visible
+            };
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target); // Stop observing once it's visible
+                    }
+                });
+            }, observerOptions);
+
+            cards.forEach(card => {
+                // Remove 'visible' class initially for all except the first header if JS is enabled
+                if(card.tagName !== 'HEADER') {
+                   card.classList.remove('visible'); 
+                }
+                observer.observe(card);
+            });
+        });
+    </script>
+</body>
+</html>

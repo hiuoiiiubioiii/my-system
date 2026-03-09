@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Study Notes: Search Indexes</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-main: #e0e0e0;
+            --text-muted: #9e9e9e;
+            --accent: #bb86fc;
+            --secondary: #03dac6;
+            --card-bg: #1e1e1e;
+            --code-bg: #2d2d2d;
+            --border: #333;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        /* Vertical Feed Container */
+        .feed-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            margin: 0 0 10px 0;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .feed-item {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border: 1px solid var(--border);
+        }
+
+        .feed-item h2 {
+            color: var(--secondary);
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .feed-item h3 {
+            color: var(--text-main);
+            margin-top: 25px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .highlight {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .insight-box {
+            background-color: rgba(187, 134, 252, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            font-style: italic;
+        }
+
+        /* Visualization Containers */
+        .viz-container {
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #444;
+        }
+
+        .viz-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #9b59b6;
+        }
+
+        /* Tokenizer Viz */
+        .token-step {
+            display: inline-block;
+            background: #444;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+        .token-step.removed {
+            background: #622;
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+        .token-step.final {
+            background: var(--secondary);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Table Viz */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+            color: var(--accent);
+        }
+        .row-highlight {
+            background-color: rgba(3, 218, 198, 0.2);
+        }
+
+        /* Sharding Viz */
+        .cluster {
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+        }
+        .node {
+            background: #222;
+            border: 2px solid var(--secondary);
+            border-radius: 8px;
+            padding: 15px;
+            flex: 1;
+            text-align: center;
+        }
+        .doc-box {
+            background: #444;
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Search Indexes</h1>
+        <p>Comprehensive Study Notes: Lucene, ElasticSearch, and the Inverted Index</p>
+    </header>
+
+    <div class="feed-container">
+
+        <!-- Feed Item 1: Intro -->
+        <article class="feed-item">
+            <h2>1. The Problem with Databases</h2>
+            <p>In most modern websites, there is a need for open-ended search queries (e.g., Google searching, Amazon product filtering, Twitter keyword matching).</p>
+            <p>Traditional SQL databases are <strong>not built for this</strong>. If you need to scan millions of documents for a specific keyword, a standard database query will be incredibly slow and resource-intensive.</p>
+            <div class="insight-box">
+                <strong>Instructor's Insight:</strong> To optimize these intense queries, we must step away from standard databases and use specialized data structures and technologies designed exclusively for searching.
+            </div>
+        </article>
+
+        <!-- Feed Item 2: Lucene Architecture -->
+        <article class="feed-item">
+            <h2>2. Apache Lucene & Architecture</h2>
+            <p>Created in 1999, <span class="highlight">Lucene</span> is the most popular open-source search index. It operates "under the hood" as the engine powering major search services like ElasticSearch and Solr.</p>
+            
+            <h3>How it Stores Data (LSM Tree + SSTable)</h3>
+            <ul>
+                <li><strong>Memory Buffer:</strong> Writes are first sent to an in-memory buffer. <em>Crucial Note:</em> Data in this buffer cannot be searched yet.</li>
+                <li><strong>Flushing:</strong> Eventually (usually about every 1 second), the buffer is written to an immutable <strong>SSTable</strong> (Sorted String Table) file on the disk. Only then is it searchable.</li>
+                <li><strong>Compaction:</strong> As many small SSTable files accumulate on the disk, Lucene merges and compacts them in the background to save space and keep searches fast.</li>
+                <li><strong>Reads:</strong> Because data is spread across multiple SSTables, a read query must scan multiple files and merge the results.</li>
+            </ul>
+        </article>
+
+        <!-- Feed Item 3: Tokenization -->
+        <article class="feed-item">
+            <h2>3. Tokenization (NLP Pre-processing)</h2>
+            <p>You can't just throw raw documents into an index. The document must be split into searchable terms through a process called <strong>Tokenizing</strong>.</p>
+            <ul>
+                <li><strong>Casing:</strong> Convert everything to lowercase so searches are case-insensitive.</li>
+                <li><strong>Punctuation & Contractions:</strong> Strip commas, periods, and handle words like "it's" vs "its".</li>
+                <li><strong>Stop Words:</strong> Remove common words ("the", "and", "a") because they take up space and nobody searches for them alone.</li>
+            </ul>
+
+            <div class="viz-container">
+                <h3>Interactive: Tokenization Pipeline</h3>
+                <p>Original Text: <em>"The quick brown Fox, it's jumping over the dogs!"</em></p>
+                <div class="viz-controls">
+                    <button onclick="runTokenize()">Run Pipeline Step-by-Step</button>
+                    <button onclick="resetTokenize()" style="background:#555; color:#fff;">Reset</button>
+                </div>
+                <div id="token-output" style="min-height: 50px; margin-top: 15px;">
+                    <!-- Tokens will appear here -->
+                </div>
+            </div>
+        </article>
+
+        <!-- Feed Item 4: The Inverted Index -->
+        <article class="feed-item">
+            <h2>4. The Inverted Index (The Bread & Butter)</h2>
+            <p>After tokenizing, words are added to the <strong>Inverted Index</strong>. Instead of mapping a Document ID to its text, it maps a <span class="highlight">Term to a list of Document IDs</span> that contain it.</p>
+            <p>Because these are stored in SSTables, they are <strong>sorted alphabetically by term</strong>.</p>
+
+            <div class="viz-container">
+                <h3>Database vs. Inverted Index</h3>
+                <div style="display: flex; gap: 20px;">
+                    <div style="flex: 1;">
+                        <h4 style="margin-top:0;">Standard DB</h4>
+                        <table>
+                            <tr><th>Doc ID</th><th>Content</th></tr>
+                            <tr><td>1</td><td>"sheesh purr"</td></tr>
+                            <tr><td>2</td><td>"lewinsky pee"</td></tr>
+                            <tr><td>3</td><td>"lewinsky poop"</td></tr>
+                        </table>
+                    </div>
+                    <div style="flex: 1;">
+                        <h4 style="margin-top:0; color: var(--accent);">Inverted Index</h4>
+                        <table>
+                            <tr><th>Term (Sorted)</th><th>Doc IDs</th></tr>
+                            <tr><td>lewinsky</td><td>2, 3</td></tr>
+                            <tr><td>pee</td><td>2</td></tr>
+                            <tr><td>poop</td><td>3</td></tr>
+                            <tr><td>purr</td><td>1</td></tr>
+                            <tr><td>sheesh</td><td>1</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <!-- Feed Item 5: Prefix & Suffix Searching -->
+        <article class="feed-item">
+            <h2>5. Prefix & Advanced Searching</h2>
+            
+            <h3>Prefix Search ($O(\log N)$ Time)</h3>
+            <p>If a user searches for words starting with <strong>"pe"</strong>, the engine doesn't scan the whole table. Because the SSTable is sorted, it performs a <strong>Binary Search</strong> to find the upper bound ("pee") and lower bound ("pen") instantly.</p>
+
+            <h3>The Suffix Hack</h3>
+            <p>You cannot binary search for a suffix (e.g., words ending in "en"). To solve this, Lucene can create a <em>second index</em> where the characters of the terms are reversed.</p>
+            
+            <div class="viz-container">
+                <h3>Visualization: The Suffix Trick</h3>
+                <p>Goal: Find words ending in <strong>"en"</strong>.</p>
+                <div class="viz-controls">
+                    <button onclick="showReversed()">1. Reverse the Query & Index</button>
+                    <button onclick="showSuffixResult()">2. Binary Search Prefix</button>
+                </div>
+                <div style="display:flex; gap: 20px; margin-top: 15px;">
+                    <div style="flex: 1;">
+                        <strong>Standard Index</strong><br>
+                        <span id="std-index" style="color: var(--text-muted);">pee<br>pen<br>poop<br>purr</span>
+                    </div>
+                    <div style="flex: 1;">
+                        <strong>Reversed Index</strong><br>
+                        <span id="rev-index" style="color: var(--text-muted);">eep<br>nep<br>poop<br>rrup</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-box">
+                <strong>Instructor's Correction:</strong> While the slide mentions splitting digits to search numbers, modern Lucene actually uses specialized data structures (like B-KD trees) for numbers and geospatial data, rather than treating them strictly as text.
+            </div>
+        </article>
+
+        <!-- Feed Item 6: ElasticSearch -->
+        <article class="feed-item">
+            <h2>6. ElasticSearch (Scaling Lucene)</h2>
+            <p>ElasticSearch takes the capability of a single Lucene index and runs it over a distributed cluster of machines to handle massive scale and ensure availability (via replication).</p>
+            
+            <h3>Document Partitioning</h3>
+            <p>ElasticSearch uses <strong>Document Partitioning</strong>, not term partitioning. Node A doesn't hold the index for words starting with "A". Instead, ElasticSearch creates a bunch of local inverted indexes for specific documents on a given node.</p>
+            
+            <div class="viz-container">
+                <h3>Visualization: Document Partitioning</h3>
+                <div class="cluster">
+                    <div class="node">
+                        <h4>Node 1</h4>
+                        <div class="doc-box">Doc 1, Doc 4</div>
+                        <div style="color:var(--secondary); font-size:0.8em; margin-top:10px;">Local Index:<br>apple -> [1]<br>zebra -> [4]</div>
+                    </div>
+                    <div class="node">
+                        <h4>Node 2</h4>
+                        <div class="doc-box">Doc 2, Doc 5</div>
+                        <div style="color:var(--secondary); font-size:0.8em; margin-top:10px;">Local Index:<br>apple -> [2, 5]<br>dog -> [5]</div>
+                    </div>
+                    <div class="node">
+                        <h4>Node 3</h4>
+                        <div class="doc-box">Doc 3 (Logs)</div>
+                        <div style="color:var(--secondary); font-size:0.8em; margin-top:10px;">Local Index:<br>error -> [3]</div>
+                    </div>
+                </div>
+                <p style="margin-top:15px; font-size:0.9em;"><em>Note: When searching for "apple", the query is broadcasted to all nodes, and the results are merged. If grouping data properly (e.g., routing all logs for today to Node 3), you can query just one node to save network traffic!</em></p>
+            </div>
+        </article>
+
+        <!-- Feed Item 7: Caching -->
+        <article class="feed-item">
+            <h2>7. Read Performance & Caching</h2>
+            <p>ElasticSearch achieves blazingly fast read speeds through multiple layers of caching:</p>
+            <ul>
+                <li><strong>OS Level Caching:</strong> The Operating System realizes SSTables are being read frequently from the disk, so it caches those actual disk pages in RAM.</li>
+                <li><strong>Query Result Caching:</strong> ElasticSearch caches the actual results of a query at the shard level. If you search the exact same thing again (and the data hasn't changed), it returns the result from memory immediately.</li>
+                <li><strong>Component Caching:</strong> ES caches <em>parts</em> of queries. If many different queries use the same filter (e.g., "in_stock: true"), ES caches that specific filter's result to reuse across future, different queries.</li>
+            </ul>
+        </article>
+
+        <!-- Feed Item 8: Conclusion -->
+        <article class="feed-item" style="border-color: var(--accent);">
+            <h2>8. Conclusion & Takeaways</h2>
+            <p>Search indexes are critical for applications that need to find strings of text faster than a traditional database scan. By combining Inverted Indexes with immutable SSTables, Lucene achieves incredible performance.</p>
+            <p>However, when scaling with ElasticSearch, you must be careful about how you partition your data to avoid hot-spots and limit cross-partition network queries.</p>
+            
+            <div class="insight-box">
+                <strong>Instructor's Anecdote:</strong> "I personally have looked like a bozo in the past when bringing up search indexes and not knowing exactly how they were implemented... hopefully you guys don't make the same mistake."<br><br>
+                <em>Takeaway: Don't just know that ElasticSearch exists; understand the Inverted Index and SSTable architecture underneath it!</em>
+            </div>
+        </article>
+
+    </div>
+
+    <script>
+        // Tokenizer Visualization Logic
+        const textPipeline = [
+            "The quick brown Fox, it's jumping over the dogs!",
+            "the quick brown fox, it's jumping over the dogs!", // Lowercase
+            "the quick brown fox its jumping over the dogs",    // Punctuation
+            "quick brown fox jumping over dogs"               // Stop words removed
+        ];
+        
+        let tokenStep = 0;
+        
+        function runTokenize() {
+            const output = document.getElementById('token-output');
+            
+            if (tokenStep === 0) {
+                output.innerHTML = `<span class="token-step">The</span> <span class="token-step">quick</span> <span class="token-step">brown</span> <span class="token-step">Fox,</span> <span class="token-step">it's</span> <span class="token-step">jumping</span> <span class="token-step">over</span> <span class="token-step">the</span> <span class="token-step">dogs!</span>`;
+                tokenStep++;
+            } else if (tokenStep === 1) {
+                output.innerHTML = `<span class="token-step">the</span> <span class="token-step">quick</span> <span class="token-step">brown</span> <span class="token-step">fox,</span> <span class="token-step">it's</span> <span class="token-step">jumping</span> <span class="token-step">over</span> <span class="token-step">the</span> <span class="token-step">dogs!</span><br><em style="color:#999; font-size:0.8em;">Applied: Lowercase</em>`;
+                tokenStep++;
+            } else if (tokenStep === 2) {
+                output.innerHTML = `<span class="token-step">the</span> <span class="token-step">quick</span> <span class="token-step">brown</span> <span class="token-step">fox</span> <span class="token-step">its</span> <span class="token-step">jumping</span> <span class="token-step">over</span> <span class="token-step">the</span> <span class="token-step">dogs</span><br><em style="color:#999; font-size:0.8em;">Applied: Punctuation & Contraction handling</em>`;
+                tokenStep++;
+            } else if (tokenStep === 3) {
+                output.innerHTML = `<span class="token-step removed">the</span> <span class="token-step final">quick</span> <span class="token-step final">brown</span> <span class="token-step final">fox</span> <span class="token-step removed">its</span> <span class="token-step final">jumping</span> <span class="token-step removed">over</span> <span class="token-step removed">the</span> <span class="token-step final">dogs</span><br><em style="color:#999; font-size:0.8em;">Applied: Stop words removed. Final tokens generated!</em>`;
+                tokenStep = 0; // reset counter for next loop
+            }
+        }
+
+        function resetTokenize() {
+            document.getElementById('token-output').innerHTML = '';
+            tokenStep = 0;
+        }
+
+        // Suffix Search Visualization Logic
+        function showReversed() {
+            document.getElementById('rev-index').innerHTML = 
+                `eep<br><span style="color:white;">nep</span> <em>(Reversed 'pen')</em><br>poop<br>rrup`;
+            document.getElementById('std-index').innerHTML = 
+                `pee<br><span style="color:white;">pen</span> <em>(Original word)</em><br>poop<br>purr`;
+        }
+
+        function showSuffixResult() {
+            document.getElementById('rev-index').innerHTML = 
+                `eep<br><span style="background:var(--secondary); color:#000; padding:2px 5px; border-radius:3px; font-weight:bold;">ne</span>p <em><- Prefix match for "ne"!</em><br>poop<br>rrup`;
+        }
+    </script>
+</body>
+</html>
