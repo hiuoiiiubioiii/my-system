@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Magical 51 Sections</title>
     <style>
-        /* 1. The Live Magical Background */
+        /* The Live Magical Background */
         body { 
             margin: 0; display: flex; height: 100vh; font-family: "Georgia", "Book Antiqua", serif; overflow: hidden; 
             background: linear-gradient(270deg, #0d1b2a, #1b263b, #2c3e50, #14213d);
@@ -28,7 +28,7 @@
             background-position: 0 0, 4px 4px;
         }
 
-        /* 2. Sidebar Layout */
+        /* Sidebar Layout */
         #sidebar { 
             width: 280px; display: flex; flex-direction: column; 
             border-right: 3px solid #6b4423; box-shadow: 5px 0 15px rgba(0,0,0,0.4); z-index: 10;
@@ -41,7 +41,7 @@
 
         /* The Golden Read All Button */
         #read-all-btn {
-            background: #d4af37; /* Hogwarts Gold */
+            background: #d4af37; 
             color: #5c0000;
             font-weight: bold; font-family: inherit; font-size: 16px;
             padding: 12px; margin: 0 15px 15px 15px;
@@ -65,7 +65,7 @@
         .chap-btn:hover { background: rgba(139, 90, 43, 0.15); color: #5c0000; }
         .chap-btn.active { background: #5c0000; color: #f4ecd8; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         
-        /* 3. Main viewing area */
+        /* Main viewing area */
         #main-content { 
             flex-grow: 1; display: flex; flex-direction: column; margin: 20px; 
             border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 40px rgba(139, 90, 43, 0.2);
@@ -95,13 +95,11 @@
             color: #2b1d0f;
         }
 
+        /* Just keeping the space between sections, but removed the forced styling */
         .continuous-chapter {
             margin-bottom: 80px;
             padding-bottom: 40px;
             border-bottom: 2px solid #c2a77d;
-        }
-        .continuous-chapter h2 {
-            text-align: center; color: #5c0000; font-size: 32px; margin-bottom: 30px;
         }
     </style>
 </head>
@@ -110,7 +108,7 @@
     <aside id="sidebar" class="parchment minimized">
         <img src="top-sketch.png" class="header-sketch" onerror="this.style.display='none'">
         
-        <button id="read-all-btn" onclick="loadAllChapters()">📖 Read Entire Book</button>
+        <button id="read-all-btn" onclick="loadAllChapters()">📖 Read All Sections</button>
 
         <div class="search-container">
             <input type="text" id="search" placeholder="Search the archives..." onkeyup="filterNav()">
@@ -127,7 +125,7 @@
     </main>
 
     <script>
-        const total = 51; // Set to 51 for s1 to s51
+        const total = 51; 
         let allLoaded = false; 
         
         const list = document.getElementById('btn-list');
@@ -142,7 +140,7 @@
             let btn = document.createElement('button');
             btn.className = 'chap-btn';
             btn.id = 'btn-' + i;
-            btn.innerText = 'Section ' + i; // Updated text to Section
+            btn.innerText = 'Section ' + i;
             if(i === 1) btn.classList.add('active');
             btn.onclick = () => loadChap(i);
             list.appendChild(btn);
@@ -154,7 +152,7 @@
             
             contViewer.style.display = 'none';
             viewer.style.display = 'block';
-            viewer.src = 's' + num + '.html'; // Fetching s1.html, s2.html...
+            viewer.src = 's' + num + '.html'; 
             
             document.querySelectorAll('.chap-btn').forEach(b => b.classList.remove('active'));
             let activeBtn = document.getElementById('btn-' + num);
@@ -166,7 +164,7 @@
             if(window.innerWidth < 800) sidebar.classList.add('minimized');
         }
 
-        // --- CONTINUOUS BOOK MODE (ALL SECTIONS) ---
+        // --- CONTINUOUS BOOK MODE (ALL SECTIONS AS THEY ARE) ---
         async function loadAllChapters() {
             viewer.style.display = 'none';
             contViewer.style.display = 'block';
@@ -182,15 +180,16 @@
             let fullHTML = '';
             for(let i = 1; i <= total; i++) {
                 try {
-                    let res = await fetch('s' + i + '.html'); // Fetching s1 to s51
+                    let res = await fetch('s' + i + '.html');
                     if(res.ok) {
                         let text = await res.text();
                         let parser = new DOMParser();
                         let doc = parser.parseFromString(text, 'text/html');
                         
+                        // MAGIC HERE: I have removed the forced <h2> titles. 
+                        // Now it drops your HTML exactly as it is into the viewer!
                         fullHTML += `
                             <div class="continuous-chapter" id="full-chap-${i}">
-                                <h2>Section ${i}</h2>
                                 ${doc.body.innerHTML}
                             </div>`;
                     }
