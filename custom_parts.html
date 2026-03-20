@@ -1,0 +1,1532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 2)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>LC #</th>
+                    <th>Problem Title (Your List)</th>
+                    <th>Brute Force Method</th>
+                    <th>Best Complexity Viz (Brute)</th>
+                    <th>How to Draw it on Paper (Brute Comp)</th>
+                    <th>Most Optimised Core Pattern</th>
+                    <th>Best Viz Technique (Optimised)</th>
+                    <th>How to Visually Dry Run It</th>
+                    <th>How to Draw it on Paper (Optimised)</th>
+                    <th>Best Complexity Viz (Optimised)</th>
+                    <th>How to Draw it on Paper (Optimised Comp)</th>
+                    <th>Mem Viz (Brute)</th>
+                    <th>Mem Viz (Optimised)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2237</td>
+                    <td>Count Positions on Street With Required Brightness</td>
+                    <td>For every lamp, iterate through its entire range $[pos - range, pos + range]$ and add +1 to an array. $O(N \cdot R)$.</td>
+                    <td>Overlapping Paint Strokes</td>
+                    <td>Draw a street. For each lamp, physically color in the blocks it lights. Overlap colors. Slow for huge ranges.</td>
+                    <td><span class="pattern">Difference Array (Sweep Line)</span></td>
+                    <td>The Entry/Exit Tally</td>
+                    <td>Instead of painting the whole range, mark $+1$ at the start of the light and $-1$ just after the light ends. Do a single prefix sum sweep to calculate actual brightness at each spot.</td>
+                    <td>Draw the street. Place a '+1' token where a lamp's light starts. Place a '-1' token where it ends. Sweep left-to-right, keeping a running total of tokens to reveal the true brightness.</td>
+                    <td>Two-Pass Linear $O(N + L)$</td>
+                    <td>Draw one pass to place boundary tokens, and one sweep pass to accumulate.</td>
+                    <td>Massive array re-allocations.</td>
+                    <td>A difference array of size $N+1$. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2252</td>
+                    <td>Dynamic Pivoting of a Table</td>
+                    <td>Manually write `CASE WHEN` statements for every known column. Fails when new dynamic categories are added.</td>
+                    <td>Hardcoded Query Walls</td>
+                    <td>Draw a massive SQL query with hardcoded `CASE WHEN` lines for every possible value.</td>
+                    <td><span class="pattern">Prepared Statements / Dynamic SQL</span></td>
+                    <td>The Code-Generating Query</td>
+                    <td>Use `GROUP_CONCAT` to dynamically build a string of `SUM(CASE WHEN...)` statements based on distinct values. Then `PREPARE` and `EXECUTE` that dynamically generated string.</td>
+                    <td>Draw a machine building a blueprint. The DB scans for unique names, writes the SQL code as a string, feeds that string back into its own compiler, and runs it.</td>
+                    <td>Two-Phase Execution</td>
+                    <td>Draw a preliminary scan for distinct values, followed by the execution of the generated pivoted query.</td>
+                    <td>N/A</td>
+                    <td>Internal string buffers for query generation.</td>
+                </tr>
+
+                <tr>
+                    <td>2253</td>
+                    <td>Dynamic Unpivoting of a Table</td>
+                    <td>Manually write `SELECT id, 'col1', col1 UNION ALL SELECT id, 'col2', col2`. Hardcoded and inflexible.</td>
+                    <td>Hardcoded Union Stacks</td>
+                    <td>Draw multiple separate `SELECT` blocks glued together manually.</td>
+                    <td><span class="pattern">Dynamic SQL / Information Schema</span></td>
+                    <td>The Column Exploder</td>
+                    <td>Query the `information_schema` to dynamically find all columns for the table, construct a massive `UNION ALL` string dynamically, and execute it.</td>
+                    <td>Draw a wide row. Drop it into an "Exploder" that shatters it into vertical rows of keys and values based on the schema blueprint.</td>
+                    <td>Dynamic Execution Overhead</td>
+                    <td>Draw a linear scan where each row undergoes a dictionary-to-row transformation.</td>
+                    <td>N/A</td>
+                    <td>Temporary memory for string concatenation.</td>
+                </tr>
+
+                <tr>
+                    <td>2286</td>
+                    <td>Booking Concert Tickets in Groups</td>
+                    <td>For every booking, linearly scan rows from 0 to $N$, summing available seats. $O(N)$ per query $\rightarrow O(Q \cdot N)$.</td>
+                    <td>Row-by-Row Search Grid</td>
+                    <td>Draw a theater. For every group, draw an arrow scanning row 1, then row 2, etc., until enough seats are found.</td>
+                    <td><span class="pattern">Segment Tree (Range Sum & Max)</span></td>
+                    <td>The Hierarchical Theater Sections</td>
+                    <td>Use a Segment Tree to track both the `max_available` seats in any row of a range, and the `sum_available` seats in a range. This allows finding a row for `gather` in $O(\log N)$ and allocating `scatter` in $O(\log N)$.</td>
+                    <td>Draw the rows at the bottom. Draw a binary tree above them. Each node stores the max and sum of its children. To find 5 seats together, walk down the tree guided by the `max` value.</td>
+                    <td>Logarithmic Query/Update $O(Q \log N)$</td>
+                    <td>Draw a timeline of $Q$ queries. Above each, draw a tree traversal of height $\log N$.</td>
+                    <td>Storing full row states with no metadata.</td>
+                    <td>A Segment Tree array of size $4N$. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2292</td>
+                    <td>Products With Three or More Orders in Two Consecutive Years</td>
+                    <td>Massive self-joins checking Year 1 against Year 2, filtering counts in both simultaneously.</td>
+                    <td>Tangled Self-Join Web</td>
+                    <td>Draw Year 2020 pointing to 2021, and 2021 pointing to 2022, doing separate aggregations for each link.</td>
+                    <td><span class="pattern">CTE Aggregation + Window Function (LEAD)</span></td>
+                    <td>The Year-Over-Year Filter</td>
+                    <td>1. CTE to group by Product and Year, keeping only rows where `COUNT >= 3`. 2. Use `LEAD(year)` on this filtered list to check if the next valid year is exactly `current_year + 1`.</td>
+                    <td>Draw a timeline. Put gold stars on years with 3+ orders. Erase other years. Look at the gold stars. If two stars are right next to each other (Year gap = 1), keep the product.</td>
+                    <td>Hash Aggregation + Sort $O(N \log N)$</td>
+                    <td>Draw the aggregation pipeline, a filter, and a final sort/window scan.</td>
+                    <td>Massive intermediate join tables.</td>
+                    <td>Internal DB window buffer. $O(P)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2314</td>
+                    <td>The First Day of the Maximum Recorded Degree in Each City</td>
+                    <td>Find max degree per city. Join back to the main table. If there are ties, group again and find the minimum date.</td>
+                    <td>Multi-Join Tie-Breaker</td>
+                    <td>Draw the table. Extract maxes. Glue them back. Find dates. Extract min date. Glue back again.</td>
+                    <td><span class="pattern">Window Function (ROW_NUMBER)</span></td>
+                    <td>The Ultimate Tie-Breaking Ranker</td>
+                    <td>Use `ROW_NUMBER() OVER (PARTITION BY city_id ORDER BY degree DESC, day ASC)`. Filter for `row_num = 1`. This handles the max degree AND the earliest date tie-breaker simultaneously.</td>
+                    <td>Draw buckets for cities. Inside, sort temperatures high-to-low. If tied, sort by date old-to-new. Hand a "#1" trophy to the top row in each bucket.</td>
+                    <td>Partitioned Sort $O(N \log N)$</td>
+                    <td>Draw a single pass that partitions, sorts by two keys, and filters the top rank.</td>
+                    <td>Temporary tables for tie-breaking joins.</td>
+                    <td>DB internal sort buffer. $O(N)$ space.</td>
+                </tr>
+                
+                <tr>
+                    <td>2339</td>
+                    <td>All the Matches of the League</td>
+                    <td>Write manual pairs or complex subqueries mapping IDs iteratively.</td>
+                    <td>Manual Mapping Matrix</td>
+                    <td>Draw Team A connecting to B, C, D manually, then B to A, C, D manually.</td>
+                    <td><span class="pattern">CROSS JOIN / SELF JOIN</span></td>
+                    <td>The Cartesian Scheduler</td>
+                    <td>Use `SELECT t1.team_name, t2.team_name FROM Teams t1 JOIN Teams t2 ON t1.team_name != t2.team_name`.</td>
+                    <td>Draw the list of teams vertically and horizontally. Draw a grid. Check every box where the row name and column name are different.</td>
+                    <td>Cartesian Product $O(N^2)$</td>
+                    <td>Draw two lists multiplying into a square grid of size $N \times N$.</td>
+                    <td>N/A</td>
+                    <td>DB result buffer. $O(N^2)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2382</td>
+                    <td>Maximum Segment Sum After Removals</td>
+                    <td>Actually remove the element, splitting the array. Recalculate the sum of all remaining segments to find the max. $O(N^2)$.</td>
+                    <td>Shattering Array Re-sums</td>
+                    <td>Draw the array. Smash a hole in it. Manually re-add the left pieces and right pieces. Repeat for every smash.</td>
+                    <td><span class="pattern">Reverse Processing + Union Find (DSU)</span></td>
+                    <td>The Reverse Builder</td>
+                    <td>Work backwards! Start with an empty array. Add elements back in the reverse order of the queries. When adding, use DSU to merge it with adjacent existing elements, track the component sum, and update `global_max`.</td>
+                    <td>Draw an empty line. Drop numbers into it backwards. When two numbers touch, they fuse into a bigger block. Write the weight on the block. Record the heaviest block seen so far. Reverse the recorded answers.</td>
+                    <td>Union-Find $O(N \cdot \alpha(N))$</td>
+                    <td>Draw a timeline moving right-to-left. Above it, draw $O(1)$ DSU merges and sum updates.</td>
+                    <td>Massive arrays of subarray slices.</td>
+                    <td>DSU parent and sum arrays. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2386</td>
+                    <td>Find the K-Sum of an Array</td>
+                    <td>Generate all $2^N$ possible subsequences, sum them up, sort the massive list of sums, and pick the K-th largest. $O(2^N \log(2^N))$.</td>
+                    <td>Exponential Array Explosion</td>
+                    <td>Draw an array. Branch out into every possible combination. Calculate the sum for each. Try to sort an impossibly long list.</td>
+                    <td><span class="pattern">Max Heap + Absolute Value Sorting</span></td>
+                    <td>The Subtractive Max-Heap</td>
+                    <td>Find the absolute maximum sum by adding all positive numbers. Then, use a Min-Heap to systematically subtract the smallest possible absolute values from this maximum to find the 2nd, 3rd... Kth sums.</td>
+                    <td>Draw the absolute max sum in a box. Draw an array of absolute values sorted smallest to largest. Use a Priority Queue to branch out, subtracting the smallest numbers one by one to step down from the max.</td>
+                    <td>Heap Extraction $O(N \log N + K \log K)$</td>
+                    <td>Draw a sorting pass over the array, followed by K extractions from a priority queue of size K.</td>
+                    <td>Memory crash from $2^N$ elements.</td>
+                    <td>A Priority Queue of size K. $O(K)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2403</td>
+                    <td>Minimum Time to Kill All Monsters</td>
+                    <td>Try every possible permutation of which monster to kill first, second, third, etc. $O(N!)$.</td>
+                    <td>Factorial Permutation Combat</td>
+                    <td>Draw N monsters. Branch out N ways for the first attack, N-1 for the second. The tree is too wide to map.</td>
+                    <td><span class="pattern">Bitmask DP</span></td>
+                    <td>The State-Dependent Mana Pool</td>
+                    <td>Use a bitmask to represent which monsters are dead. `dp[mask]` is the minimum days to reach this state. The mana gained depends on the number of set bits in the mask.</td>
+                    <td>Draw a row of lightbulbs (monsters). When a bulb is off (dead), you gain a passive mana multiplier. Try turning off remaining bulbs one by one, recording the cheapest path to each light configuration.</td>
+                    <td>Exponential State Grid $O(N \cdot 2^N)$</td>
+                    <td>Draw a table of $2^N$ rows. Each row has at most N transitions to compute the next state.</td>
+                    <td>Recursive tracking of all permutations.</td>
+                    <td>A DP array of size $2^N$. $O(2^N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2436</td>
+                    <td>Minimum Split Into Subarrays With GCD Greater Than One</td>
+                    <td>Test all subarray splits using backtracking, calculating the GCD for every segment from scratch. $O(2^N \cdot N)$.</td>
+                    <td>Recursive Split & Recalculate</td>
+                    <td>Draw an array. Put a divider at index 1. Calculate GCDs. Move divider to index 2. Calculate again.</td>
+                    <td><span class="pattern">Greedy / Running GCD</span></td>
+                    <td>The GCD Collapse Boundary</td>
+                    <td>Iterate through the array maintaining a running GCD. When the `GCD(current_running_gcd, nums[i]) == 1`, you MUST split the array here. Reset the running GCD to `nums[i]` and increment the subarray count.</td>
+                    <td>Draw the array. Keep a "Current GCD" box. For each number, merge it into the box. If the box turns into '1', draw a hard vertical wall, count it, and put the current number into a fresh box.</td>
+                    <td>Linear Scan $O(N \log(\text{Max\_Val}))$</td>
+                    <td>Draw a single straight line. The log factor comes from the Euclidean algorithm at each step.</td>
+                    <td>Array slices and deep recursion.</td>
+                    <td>A single integer tracking the running GCD. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2472</td>
+                    <td>Maximum Number of Non-overlapping Palindrome Substrings</td>
+                    <td>Find all palindromes of length $\ge K$. Use backtracking to find the maximum non-overlapping set. $O(N^3 + 2^P)$.</td>
+                    <td>Palindrome Combination Web</td>
+                    <td>Bracket every palindrome. Draw lines connecting valid non-overlapping sets.</td>
+                    <td><span class="pattern">DP / Center Expansion + Greedy</span></td>
+                    <td>The Early-Exit Palindrome Grab</td>
+                    <td>Expand around centers to find palindromes. If you find one of length K or K+1, greedily take it! Continuing to expand it to K+5 doesn't help maximize the *count* of non-overlapping substrings.</td>
+                    <td>Draw the string. Pick a center. Expand. As soon as the bracket width hits K (or K+1 for even), snap it shut, count it, and jump your scanner past the end of that bracket.</td>
+                    <td>Linear Center Scan $O(N \cdot K)$</td>
+                    <td>Draw a straight line for centers. The expansion is capped at K, making the inner loop strictly bounded.</td>
+                    <td>2D array of all palindromes.</td>
+                    <td>Pointers and a counter. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2507</td>
+                    <td>Smallest Value After Replacing With Sum of Prime Factors</td>
+                    <td>Recursively calculate the sum of prime factors, potentially branching wildly if implemented poorly without a while loop.</td>
+                    <td>Redundant Factorization Trees</td>
+                    <td>Draw a number. Branch it out into its primes. Sum them. Re-draw the entire tree for the new number.</td>
+                    <td><span class="pattern">Simulation + Prime Factorization</span></td>
+                    <td>The Prime Sum Collapse</td>
+                    <td>Factorize the number $N$ into its primes and sum them. If the sum equals $N$, stop (it cannot get smaller). Otherwise, set $N = \text{sum}$ and repeat.</td>
+                    <td>Draw a large number block. Smash it into its prime building blocks. Add their values together to form a new block. Keep smashing until the block stops shrinking.</td>
+                    <td>Iterative Factorization $O(\text{Answer} \cdot \sqrt{N})$</td>
+                    <td>Draw a loop that runs until stabilization. Inside, draw a fast $O(\sqrt{N})$ factorization pass.</td>
+                    <td>Deep recursion stack.</td>
+                    <td>A few integer tracking variables. $O(1)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 3)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>LC #</th>
+                    <th>Problem Title (Your List)</th>
+                    <th>Brute Force Method</th>
+                    <th>Best Complexity Viz (Brute)</th>
+                    <th>How to Draw it on Paper (Brute Comp)</th>
+                    <th>Most Optimised Core Pattern</th>
+                    <th>Best Viz Technique (Optimised)</th>
+                    <th>How to Visually Dry Run It</th>
+                    <th>How to Draw it on Paper (Optimised)</th>
+                    <th>Best Complexity Viz (Optimised)</th>
+                    <th>How to Draw it on Paper (Optimised Comp)</th>
+                    <th>Mem Viz (Brute)</th>
+                    <th>Mem Viz (Optimised)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2650</td>
+                    <td>Design Cancellable Function</td>
+                    <td>Use global state variables to track if a function should stop, requiring manual checks inside every loop of the generator.</td>
+                    <td>Messy Global Flags</td>
+                    <td>Draw a function box connected to a giant red "STOP" button that constantly has to be polled.</td>
+                    <td><span class="pattern">JavaScript Generators & Promises</span></td>
+                    <td>The Yield Interceptor</td>
+                    <td>Wrap the generator in a Promise. Create a `cancel` function that forces the generator to throw an error (`generator.throw()`). Handle the yields recursively, passing resolved values back via `generator.next()`.</td>
+                    <td>Draw a conveyer belt (Generator) yielding boxes (Promises). An overseer resolves the box and feeds the result back. If the "Cancel" lever is pulled, the overseer throws a wrench into the belt.</td>
+                    <td>Asynchronous Resolution $O(N)$</td>
+                    <td>Draw a timeline of yielded promises resolving sequentially.</td>
+                    <td>Callback hell and memory leaks.</td>
+                    <td>Closure scopes storing the generator state. $O(1)$ auxiliary space.</td>
+                </tr>
+
+                <tr>
+                    <td>2663</td>
+                    <td>Lexicographically Smallest Beautiful String</td>
+                    <td>Generate the next lexicographical string, check if it has palindromes. If yes, generate the next. $O(26^N)$.</td>
+                    <td>Endless Lexicographical Checking</td>
+                    <td>Write the string. Increment the last letter. Scan the whole string for palindromes. Repeat millions of times.</td>
+                    <td><span class="pattern">Greedy String Mutation (Right-to-Left)</span></td>
+                    <td>The Local Suffix Fixer</td>
+                    <td>Work backwards from the end of the string. Increment a character. To keep it "beautiful", the new character only needs to differ from `string[i-1]` and `string[i-2]`. Once a valid increment is found, fill the rest of the string with the smallest valid characters.</td>
+                    <td>Draw the string. Point to the last letter. Bump it up by 1. Check the 2 letters to its left. If it matches either, bump it again. Once safe, move to the right and fill with 'a', 'b', or 'c' while avoiding local pairs.</td>
+                    <td>Linear Scan & Fill $O(N)$</td>
+                    <td>Draw a line moving right-to-left to find the pivot, then left-to-right to fill the suffix.</td>
+                    <td>Millions of generated strings.</td>
+                    <td>A character array. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2687</td>
+                    <td>Bikes Last Time Used</td>
+                    <td>Join the table to itself to compare times, or pull all data into the app to sort and slice. $O(N^2)$.</td>
+                    <td>App-Side Sorting</td>
+                    <td>Draw all bike logs poured into application memory to sort by time and filter manually.</td>
+                    <td><span class="pattern">Window Function (MAX) / GROUP BY</span></td>
+                    <td>The Group-and-Grab</td>
+                    <td>Simply `GROUP BY bike_id` and select the `MAX(end_time)`. If location is needed, use `ROW_NUMBER() OVER(PARTITION BY bike_id ORDER BY end_time DESC)` and filter for rank 1.</td>
+                    <td>Draw buckets for each Bike ID. Toss all ride logs into their buckets. Pull out the log with the highest timestamp from each bucket.</td>
+                    <td>Partitioned Sort $O(N \log N)$</td>
+                    <td>Draw data flowing through a grouping node and outputting the max.</td>
+                    <td>Application-side memory.</td>
+                    <td>DB internal sort/group buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2688</td>
+                    <td>Find Active Users</td>
+                    <td>Self-join the table on `user_id` and `date`, checking if `course_id_1 != course_id_2`. $O(N^2)$.</td>
+                    <td>Quadratic Self-Join</td>
+                    <td>Draw lines connecting every row for a user to every other row for that same user.</td>
+                    <td><span class="pattern">GROUP BY + COUNT(DISTINCT)</span></td>
+                    <td>The Date-User Pivot</td>
+                    <td>`GROUP BY user_id, date` and use `HAVING COUNT(DISTINCT course_id) >= 2`. This is much cleaner and faster than a self-join.</td>
+                    <td>Draw a table. Group rows into buckets by exact User + Date combination. Count the unique courses inside each bucket. Keep buckets with 2+.</td>
+                    <td>Hash Aggregation $O(N)$</td>
+                    <td>Draw a single pass through the table building a hash map of groupings.</td>
+                    <td>Large temporary join tables.</td>
+                    <td>Hash map in DB memory. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2692</td>
+                    <td>Make Object Immutable</td>
+                    <td>Manually checking every property modification with `if` statements, failing on nested objects or array pushes.</td>
+                    <td>Manual Property Guards</td>
+                    <td>Draw a bouncer at the door of an object checking every single read/write request manually.</td>
+                    <td><span class="pattern">Proxy Object / Recursive Object.freeze</span></td>
+                    <td>The Recursive Ice Block</td>
+                    <td>Use a JS `Proxy` to intercept `set`, `defineProperty`, and `setPrototypeOf` traps, throwing an error. Or recursively use `Object.freeze()` on all keys that are objects/arrays.</td>
+                    <td>Draw an object tree. Pour liquid nitrogen over the root, watching it freeze solid down through all its branches and leaves, rejecting any attempt to bend them.</td>
+                    <td>Recursive Traversal $O(N)$</td>
+                    <td>Draw a tree representing the object structure. A single line traces through all shared nodes.</td>
+                    <td>Creating massive deep copies.</td>
+                    <td>Call stack depth matching object nesting. $O(\text{Depth})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2700</td>
+                    <td>Differences Between Two Objects</td>
+                    <td>Flat comparison loops that fail on nested structures, requiring messy `JSON.stringify` hacks that break on unordered keys.</td>
+                    <td>Stringified Mismatch Mess</td>
+                    <td>Draw two giant JSON strings. Try to draw lines between matching properties. The lines become a chaotic web due to key ordering.</td>
+                    <td><span class="pattern">Recursive DFS (Object Traversal)</span></td>
+                    <td>The Deep-Diff Tree Walker</td>
+                    <td>Recursively walk both objects simultaneously. If types differ or they are primitives, return the difference array. If they are arrays/objects, recurse into matching keys. Ignore keys not present in both.</td>
+                    <td>Draw two matching tree structures (Objects/Arrays). Trace down both simultaneously with two fingers. If a leaf node differs, circle it and write `[val1, val2]`.</td>
+                    <td>Node Traversal $O(N)$</td>
+                    <td>Draw a tree representing the object structure. A single line traces through all shared nodes.</td>
+                    <td>Deep copies of objects via JSON parsing.</td>
+                    <td>Call stack depth matching object nesting. $O(\text{Depth})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2720</td>
+                    <td>Popularity Percentage</td>
+                    <td>Two separate massive queries counting user1 and user2 occurrences, followed by a slow full outer join and manual math.</td>
+                    <td>Disjointed Tally Tables</td>
+                    <td>Draw two separate tables. Count friends on the left. Count friends on the right. Try to manually merge the lists.</td>
+                    <td><span class="pattern">UNION CTE + Window/Aggregate</span></td>
+                    <td>The Undirected Graph Flattener</td>
+                    <td>Friendships are bidirectional. Create a CTE that `UNION`s `(user1, user2)` and `(user2, user1)`. This creates a flat list of ALL friends for every user. Then group by user, count distinct friends, and divide by the total distinct users in the network.</td>
+                    <td>Draw a directed graph. Flip it so arrows go both ways. List every user and simply count the arrows touching them. Divide by total nodes.</td>
+                    <td>Linear Scan & Group $O(N)$</td>
+                    <td>Draw a single pipeline: UNION $\rightarrow$ Hash Aggregate $\rightarrow$ Math calculation.</td>
+                    <td>Massive temporary tables for outer joins.</td>
+                    <td>SQL internal hash map for distinct counts. $O(U)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2759</td>
+                    <td>Convert JSON String to Object</td>
+                    <td>Using `eval()` (security risk) or writing a massive regex engine that fails on nested brackets.</td>
+                    <td>Regex Spaghetti</td>
+                    <td>Draw a massive regular expression trying to capture infinite depths of `{}` and `[]`. It loops back on itself and crashes.</td>
+                    <td><span class="pattern">Recursive Descent Parser / Stack</span></td>
+                    <td>The Token-Consumer Loop</td>
+                    <td>Iterate the string character by character. When you see `{`, recursively parse an object until `}`. When you see `[`, recursively parse an array until `]`. Parse strings, numbers, and booleans sequentially.</td>
+                    <td>Draw the string. Draw a "Consumer" pac-man. It eats a `{`, opens a new empty Object box, and calls a mini-pac-man to eat the keys/values until it hits `}`.</td>
+                    <td>Single Pass Parsing $O(N)$</td>
+                    <td>Draw a straight timeline of the string. Above it, draw the call stack growing and shrinking for nested structures.</td>
+                    <td>Massive string slicing/substring allocations. $O(N^2)$.</td>
+                    <td>Recursive call stack. $O(\text{Depth})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2761</td>
+                    <td>Prime Pairs With Target Sum</td>
+                    <td>Check every number up to N for primality $O(\sqrt{N})$, then check if $n - i$ is prime. $O(N \cdot \sqrt{N})$.</td>
+                    <td>Repeated Prime Testing</td>
+                    <td>Draw the number line. For every single number, draw a mini-loop calculating its divisors. Redundant checks everywhere.</td>
+                    <td><span class="pattern">Sieve of Eratosthenes + Two Pointers</span></td>
+                    <td>The Sieve & Meet-in-Middle</td>
+                    <td>1. Precompute primes up to N using the Sieve in $O(N \log \log N)$. 2. Iterate $i$ from 2 to $n/2$. If `isPrime[i]` and `isPrime[n-i]` are both true, it's a valid pair.</td>
+                    <td>Draw a grid of numbers 1 to N. Cross out multiples of 2, 3, 5. Then, put a left finger on 2 and right finger on N-2. If both fingers are on uncrossed numbers, record them. Slide fingers inward.</td>
+                    <td>Sieve Precomputation $O(N \log \log N)$</td>
+                    <td>Draw a grid with crossing-out lines, followed by a single linear scan up to N/2.</td>
+                    <td>Calling primality tests without caching.</td>
+                    <td>A boolean array of size N. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2764</td>
+                    <td>Is Array a Preorder of Some Binary Tree</td>
+                    <td>Recursively attempt to build every possible valid BST shape from the array. $O(\text{Exponential})$.</td>
+                    <td>Tree Shape Permutations</td>
+                    <td>Draw the root. Branch out trying to fit the next number as a left child, then a right child. Backtrack constantly.</td>
+                    <td><span class="pattern">Monotonic Stack (Parent Tracking)</span></td>
+                    <td>The Right-Branch Verifier</td>
+                    <td>In a preorder traversal represented as nodes with depths, the depth must increment by exactly 1 (going left) or decrease/stay same (going right up the tree). Use a stack to track the path. Pop the stack if the next node's depth is $\le$ the stack top's depth.</td>
+                    <td>Draw a vertical tube (stack). Push the root. Read the next node. If its depth is deeper, push it. If it's shallower, pop the tube until you find its parent depth. If the parent doesn't exist, it's invalid.</td>
+                    <td>Single Linear Scan $O(N)$</td>
+                    <td>Draw an array timeline. Show $O(1)$ amortized stack push/pop operations at each step.</td>
+                    <td>Generating physical tree nodes in memory.</td>
+                    <td>A stack storing node depths. $O(H)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2767</td>
+                    <td>Partition String Into Minimum Beautiful Substrings</td>
+                    <td>Generate all possible partitions of the string. Convert each to decimal and check if it's a power of 5. $O(2^N)$.</td>
+                    <td>Exponential Partition Forest</td>
+                    <td>Draw the string. At every character gap, branch: Split or Don't Split. Tree width is massive.</td>
+                    <td><span class="pattern">Dynamic Programming (1D)</span></td>
+                    <td>The Valid-Jump Tracker</td>
+                    <td>`dp[i]` = min substrings for the prefix of length `i`. To calculate `dp[i]`, look back at all previous indices `j`. If `substring(j, i)` has no leading zeros and is a power of 5, `dp[i] = min(dp[i], dp[j] + 1)`.</td>
+                    <td>Draw the binary string. Below it, draw a DP array. From index `i`, draw backward arcs to previous valid split points `j`. Write the minimum arc path length in `dp[i]`.</td>
+                    <td>Quadratic Substring Checks $O(N^2)$</td>
+                    <td>Draw an array of length N. At each index, draw a backward-scanning loop of max length N. Since N $\le$ 15, this is extremely fast.</td>
+                    <td>Massive recursion depth and string slicing.</td>
+                    <td>A 1D DP array of size N. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2795</td>
+                    <td>Parallel Execution of Promises for Individual Results Retrieval</td>
+                    <td>Awaiting promises in a `for` loop, destroying the parallel nature of Promises. Time = sum of all execution times.</td>
+                    <td>The Sequential Waterfall</td>
+                    <td>Draw 3 runners. Runner 1 runs, finishes. Runner 2 runs, finishes. Runner 3 runs. Highly inefficient.</td>
+                    <td><span class="pattern">Promise.allSettled Polyfill</span></td>
+                    <td>The Racing Lanes</td>
+                    <td>Fire all promises simultaneously. Attach `.then()` and `.catch()` to each to capture the `{status, value/reason}` object. Keep a counter of finished promises. When the counter hits the array length, resolve the main wrapper promise.</td>
+                    <td>Draw 3 runners starting at the exact same time. Draw a "Finish Line Clerk" with a clipboard. As each runner crosses (success or fail), the clerk writes it down. When 3 names are written, the clerk hands over the clipboard.</td>
+                    <td>Parallel Asynchronous $O(\text{Max}(\text{Time}))$</td>
+                    <td>Draw a Gantt chart. All tasks start at $T=0$. The total time is the length of the longest task.</td>
+                    <td>Blocking the main thread with massive arrays.</td>
+                    <td>An array of result objects identical in size to the input. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2821</td>
+                    <td>Delay the Resolution of Each Promise</td>
+                    <td>Using `while` loops to block the thread until time passes, completely freezing the browser.</td>
+                    <td>Thread-Blocking Brick Wall</td>
+                    <td>Draw the JS Call Stack completely jammed by an infinite loop, preventing any other code from running.</td>
+                    <td><span class="pattern">setTimeout + Promise Wrapper</span></td>
+                    <td>The Asynchronous Waiting Room</td>
+                    <td>Wrap the original function call in a new Promise. Inside, use `setTimeout` with the specified delay. When the timeout fires, execute the original function and `resolve()` or `reject()` the wrapper promise with its result.</td>
+                    <td>Draw a function entering a Waiting Room. Set a timer. The JS engine leaves and does other things. When the timer rings, the engine comes back, runs the function, and ships the result out.</td>
+                    <td>Non-Blocking Event Loop $O(1)$</td>
+                    <td>Draw the JS Event Loop. The task is handed to the Web APIs, leaving the main stack empty and fast.</td>
+                    <td>Memory leaks from un-cleared intervals.</td>
+                    <td>Closure holding the resolve/reject references. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2822</td>
+                    <td>Inversion of Object</td>
+                    <td>Using `for...in` loops without checking `hasOwnProperty`, accidentally grabbing prototype chain methods.</td>
+                    <td>Prototype Pollution Grid</td>
+                    <td>Draw an object. The loop accidentally grabs built-in functions like `toString` and tries to invert them, causing chaos.</td>
+                    <td><span class="pattern">Object.entries() + Array.reduce()</span></td>
+                    <td>The Key-Value Swapper</td>
+                    <td>Extract `[key, value]` pairs using `Object.entries(obj)`. Iterate and assign `newObj[value] = key`. Array values require special handling to either stringify or map effectively.</td>
+                    <td>Draw a list of name tags `[Key: A, Value: 1]`. Take the tags, flip them over to read `[Key: 1, Value: A]`, and stick them onto a brand new blank object.</td>
+                    <td>Linear Object Iteration $O(N)$</td>
+                    <td>Draw a single pass over the object's keys. $O(1)$ hash map insertion per key.</td>
+                    <td>Modifying the object in place and breaking references.</td>
+                    <td>A brand new Object with N keys. $O(N)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 4)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>LC #</th>
+                    <th>Problem Title (Your List)</th>
+                    <th>Brute Force Method</th>
+                    <th>Best Complexity Viz (Brute)</th>
+                    <th>How to Draw it on Paper (Brute Comp)</th>
+                    <th>Most Optimised Core Pattern</th>
+                    <th>Best Viz Technique (Optimised)</th>
+                    <th>How to Visually Dry Run It</th>
+                    <th>How to Draw it on Paper (Optimised)</th>
+                    <th>Best Complexity Viz (Optimised)</th>
+                    <th>How to Draw it on Paper (Optimised Comp)</th>
+                    <th>Mem Viz (Brute)</th>
+                    <th>Mem Viz (Optimised)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>2841</td>
+                    <td>Maximum Sum of Almost Unique Subarray</td>
+                    <td>Generate all subarrays of length K. For each, use a Set to check uniqueness and a loop to calculate the sum. $O(N \cdot K)$.</td>
+                    <td>Redundant Subarray Re-checking</td>
+                    <td>Draw the array. Draw a box of size K. Recalculate everything. Slide box by 1. Recalculate everything from scratch.</td>
+                    <td><span class="pattern">Sliding Window + Hash Map (Frequencies)</span></td>
+                    <td>The State-Preserving Window</td>
+                    <td>Maintain a window of size K, a running sum, and a frequency Map. When sliding: Add the new right element (update sum & map). Remove the old left element (update sum & map). If `Map.size >= M`, update `max_sum`.</td>
+                    <td>Draw a window frame over the array. Slide it right. Take the exiting number, subtract from total, remove from Map. Take entering number, add to total, add to Map. Check Map size.</td>
+                    <td>Single Pass $O(N)$</td>
+                    <td>Draw a single timeline. $O(1)$ math and Map updates at each step.</td>
+                    <td>Creating new Set objects for every subarray.</td>
+                    <td>A Hash Map holding at most K elements. $O(K)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2842</td>
+                    <td>Count K-Subsequences of a String With Maximum Beauty</td>
+                    <td>Generate all possible $K$-length subsequences and manually calculate the beauty (frequency sum) of each. $O(\text{Combinations})$.</td>
+                    <td>Combinatorial Nightmare Tree</td>
+                    <td>Draw the string. Branch out to pick every possible combination of K characters. Compute frequencies for millions of strings.</td>
+                    <td><span class="pattern">Greedy Frequency Sorting + Combinatorics</span></td>
+                    <td>The Frequency-Ranked Bucket Math</td>
+                    <td>Count frequencies of all chars. Sort descending. Greedily pick the top K frequencies. If the Kth frequency ties with others, use combinations ($nCr$) to calculate ways to pick the remaining slots. Multiply by frequencies.</td>
+                    <td>Draw buckets for A-Z based on frequency height. Sort buckets tallest to shortest. Grab top K buckets. If the last bucket ties with leftovers, use math to calculate permutations.</td>
+                    <td>Sorting + Math $O(N + 26 \log 26)$</td>
+                    <td>Draw a linear scan to count, a tiny $O(1)$ sort of 26 items, and a constant time math calculation.</td>
+                    <td>Storing full subsequences.</td>
+                    <td>Frequency array of size 26. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2892</td>
+                    <td>Minimizing Array After Replacing Pairs With Their Product</td>
+                    <td>Try multiplying every possible adjacent pair using backtracking to find the sequence that yields the shortest array. $O(2^N)$.</td>
+                    <td>Recursive Array Collapse</td>
+                    <td>Draw the array. Pick a pair, multiply, branch. Pick a different pair, multiply, branch. Track the shortest branch.</td>
+                    <td><span class="pattern">Greedy Array Compression</span></td>
+                    <td>The Running-Product Accumulator</td>
+                    <td>Iterate linearly. Maintain a `current_product`. If `current_product * nums[i] <= k`, update the product (they fuse). Otherwise, the fusion breaks; reset `current_product = nums[i]` and increment the final array length counter.</td>
+                    <td>Draw the numbers. Roll a snowball left to right. As it rolls over a number, multiply it. If the snowball gets bigger than $k$, it shatters. Start rolling a new snowball and add 1 to your count.</td>
+                    <td>Single Linear Scan $O(N)$</td>
+                    <td>Draw a single straight line. Each element undergoes one $O(1)$ multiplication and comparison.</td>
+                    <td>Storing thousands of array variations.</td>
+                    <td>A single `current_product` variable. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2954</td>
+                    <td>Count the Number of Infection Sequences</td>
+                    <td>Generate all possible permutations of the infection order using backtracking and check if they are valid. $O(N!)$.</td>
+                    <td>Factorial Infection Tree</td>
+                    <td>Draw a line of healthy/infected nodes. Branch out for every possible "next infected" node. The tree grows infinitely.</td>
+                    <td><span class="pattern">Combinatorics + Modular Inverse</span></td>
+                    <td>The Gap Permutation Math</td>
+                    <td>Identify "gaps" of uninfected people. For a gap bounded by two infected people, there are $2^{\text{length}-1}$ ways to infect them. Multiply these variations and use combinations ($nCr$) to interleave the different gap sequences.</td>
+                    <td>Draw the array. Bracket the "gaps" of healthy nodes. Write a math formula under each gap, and multiply them together using a large combinatorial equation.</td>
+                    <td>Linear Scan + Fast Math $O(N \log \text{MOD})$</td>
+                    <td>Draw a single pass to find gaps, followed by fast modular exponentiation.</td>
+                    <td>Storing millions of sequence arrays.</td>
+                    <td>A few integer variables. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2978</td>
+                    <td>Symmetric Coordinates</td>
+                    <td>A raw Cartesian self-join checking every row against every other row, leading to massive duplicate pairs. $O(N^2)$.</td>
+                    <td>Unfiltered Cartesian Web</td>
+                    <td>Draw Table A. Draw lines from every row in A to every row in a copy of Table A, circling matches but capturing duplicates.</td>
+                    <td><span class="pattern">Self-Join with ROW_NUMBER()</span></td>
+                    <td>The Unique-ID Matcher</td>
+                    <td>Assign a unique ID (ROW_NUMBER) to each coordinate. Join the table to itself where `A.X = B.Y` and `A.Y = B.X`, but enforce `A.ID != B.ID` and `A.X <= A.Y` to prevent reverse duplicates.</td>
+                    <td>Draw the table. Add a unique "ID" sticker to each row. Draw a selective bridge only between rows that mirror each other AND have different ID stickers.</td>
+                    <td>Indexed Join $O(N \log N)$</td>
+                    <td>Draw an index lookup tree feeding into a filtered join node.</td>
+                    <td>Massive temporary memory for $N^2$ joins.</td>
+                    <td>Database Hash/Merge join buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2984</td>
+                    <td>Find Peak Calling Hours for Each City</td>
+                    <td>Group by City and Hour, get counts, then write a correlated subquery to rescan and find the max count for that specific city.</td>
+                    <td>Redundant Subquery Scan</td>
+                    <td>Draw City buckets. Inside, draw Hour buckets. Draw a magnifying glass that rescans every Hour bucket twice.</td>
+                    <td><span class="pattern">Window Function (RANK)</span></td>
+                    <td>The Peak-Hour Ranker</td>
+                    <td>Group by City and Hour to get call counts. Wrap this in a CTE, and use `RANK() OVER (PARTITION BY City ORDER BY call_count DESC)`. Select where rank = 1.</td>
+                    <td>Draw City buckets. Sort the Hour blocks inside them by height (call count). Slap a "#1" sticker on the tallest block(s) in each bucket and toss the rest.</td>
+                    <td>Partitioned Sort $O(N \log N)$</td>
+                    <td>Draw a pipeline: Group $\rightarrow$ Sort $\rightarrow$ Rank $\rightarrow$ Filter.</td>
+                    <td>Temp tables for subquery processing.</td>
+                    <td>DB sorting buffer. $O(\text{Cities})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>2985</td>
+                    <td>Calculate Compressed Mean</td>
+                    <td>Expand the compressed data into individual rows (e.g., generating 5 rows if count=5), then running `AVG()`.</td>
+                    <td>Row-Unrolling Explosion</td>
+                    <td>Draw a compressed row `[Value: 10, Count: 5]`. Draw a machine blowing it up into 5 separate `[10]` rows before averaging.</td>
+                    <td><span class="pattern">Weighted Average Formula</span></td>
+                    <td>The Weighted Math Node</td>
+                    <td>Do the math directly on the compressed data: `SUM(item_value * count) / SUM(count)`. Round the result as needed.</td>
+                    <td>Draw a row. Multiply the two columns to get a "Total Weight". Sum all weights, sum all counts, and divide the two giant numbers.</td>
+                    <td>Single Linear Pass $O(N)$</td>
+                    <td>Draw a single straight line through the rows applying constant $O(1)$ math.</td>
+                    <td>Massive RAM to hold unrolled rows.</td>
+                    <td>Two running sum variables in the DB engine. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3055</td>
+                    <td>Top Percentile Fraud</td>
+                    <td>Calculate total rows, calculate top 5% threshold manually, then use `LIMIT` or row numbers in a complex subquery.</td>
+                    <td>Manual Threshold Math</td>
+                    <td>Draw a calculator dividing row counts, passing the number back into a second query.</td>
+                    <td><span class="pattern">Window Function (PERCENT_RANK)</span></td>
+                    <td>The Built-In Percentile Gauge</td>
+                    <td>Use `PERCENT_RANK() OVER (PARTITION BY state ORDER BY fraud_score DESC)`. The engine handles the relative ranking (0.0 to 1.0). Filter for `<= 0.05`.</td>
+                    <td>Draw data sorted by fraud score. Draw a ruler next to it marked from 0% to 100%. Draw a red line at the top 5% mark and slice the data there.</td>
+                    <td>Partitioned Sort $O(N \log N)$</td>
+                    <td>Draw a pipeline that sorts within partitions and assigns a float rank.</td>
+                    <td>Temporary tables for manual counts.</td>
+                    <td>DB sorting buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3064</td>
+                    <td>Guess the Number Using Bitwise Questions I</td>
+                    <td>Guess every number from 1 to $2^{31}$ sequentially using the interactive API. Time Limit Exceeded instantly.</td>
+                    <td>Linear API Spam $O(N)$</td>
+                    <td>Draw a line of billions of numbers. Draw an arrow pointing to 1, then 2, then 3.</td>
+                    <td><span class="pattern">Interactive Bit Manipulation</span></td>
+                    <td>The 32-Bit Interrogator</td>
+                    <td>A 32-bit integer is just 32 true/false questions. Query the API for the exact bit position using `1 << i`. Reconstruct the target number bit by bit using bitwise OR (`target |= (1 << i)`).</td>
+                    <td>Draw 32 empty boxes (0 to 31). Ask the API: "Is box 0 a 1?". If yes, write 1. If no, write 0. Move to box 1. Rebuild the number instantly.</td>
+                    <td>Strictly Constant Time $O(32)$</td>
+                    <td>Draw exactly 32 discrete API call boxes. Execution time is fixed regardless of number size.</td>
+                    <td>None, purely sequential.</td>
+                    <td>A single `target` integer variable. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3073</td>
+                    <td>Maximum Increasing Triplet Value</td>
+                    <td>Three nested loops to check $i < j < k$ and $arr[i] < arr[j] < arr[k]$. $O(N^3)$.</td>
+                    <td>Cubic Triplet Hunting</td>
+                    <td>Draw the array. Pick an element. Draw lines to every future element, and from those, to every future element.</td>
+                    <td><span class="pattern">Right Max Array + Sorted Set</span></td>
+                    <td>The Peak-and-Valley Tracker</td>
+                    <td>To maximize $arr[i] - arr[j] + arr[k]$, we want a large $arr[i]$, small $arr[j]$, and large $arr[k]$. Precompute the maximum valid elements to the right. Use a Sorted Set while iterating to find the optimal valid $arr[i]$ strictly smaller than $arr[j]$.</td>
+                    <td>Draw the array. Above it, track the maximum elements to the right. Below it, maintain a sliding "Best Left" box. Combine Top, Middle, and Bottom for the max score.</td>
+                    <td>Set Insertion + Scan $O(N \log N)$</td>
+                    <td>Draw a linear scan. At each step, do an $O(\log N)$ lookup/insertion in a Tree/Set.</td>
+                    <td>None.</td>
+                    <td>A suffix max array and a balanced BST (Set). $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3078</td>
+                    <td>Match Alphanumerical Pattern in Matrix I</td>
+                    <td>For every cell in the 2D grid, overlay the pattern and do a full character-by-character validation loop. $O(R \cdot C \cdot P_R \cdot P_C)$.</td>
+                    <td>Brute Force Stamping</td>
+                    <td>Draw the grid. Take the pattern "stamp" and press it onto every single cell, checking every pixel under the stamp.</td>
+                    <td><span class="pattern">2D Sliding Window / Submatrix Hashing</span></td>
+                    <td>The Consistent-Mapping Window</td>
+                    <td>Treat the pattern as a 2D window. As you slide it over the board, verify that letters in the pattern consistently map to single digits in the board. Reset the bijection map for each window shift.</td>
+                    <td>Draw the pattern matrix. Slide it over the main grid. When a letter touches a number, draw a string attaching them. If a letter tries to attach to *two different* numbers in the same window, snap the string and slide forward.</td>
+                    <td>Optimized Window Scan</td>
+                    <td>Draw a window moving across a grid. Inside the window, constant-time Hash Map checks occur.</td>
+                    <td>Massive deep copies of sub-matrices.</td>
+                    <td>Two small arrays (size 26 and 10) for character mapping. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3090</td>
+                    <td>Maximum Length Substring With Two Occurrences</td>
+                    <td>Generate every substring, build a frequency map for each from scratch, and check if any count exceeds 2. $O(N^3)$.</td>
+                    <td>Resetting Frequency Tally</td>
+                    <td>Draw a string. Bracket a section. Tally all letters. Erase tally. Move bracket. Re-tally.</td>
+                    <td><span class="pattern">Sliding Window (Two Pointers)</span></td>
+                    <td>The Expand-and-Contract Caterpillar</td>
+                    <td>Use `left` and `right` pointers. Expand `right`, adding characters to a frequency map. If a character hits 3, pause `right` and shrink `left` until that specific character's frequency drops back to 2. Update max length.</td>
+                    <td>Draw the string. A caterpillar stretches right, eating letters. It eats a 3rd 'a' and gets sick. Its tail pulls forward, spitting out letters until it spits out an 'a'. It stretches right again.</td>
+                    <td>Single Pass $O(N)$</td>
+                    <td>Draw a single line. The `left` and `right` pointers only ever move forward, making 2N steps total.</td>
+                    <td>Creating new maps for $N^2$ substrings.</td>
+                    <td>A frequency array of size 26. $O(1)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 5)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <tbody>
+                <tr>
+                    <td>3137</td>
+                    <td>Minimum Number of Operations to Make Word K-Periodic</td>
+                    <td>Generate every possible K-periodic string, compare it against the original, and count differences. $O(N \cdot \text{Variations})$.</td>
+                    <td>Infinite Periodic Generation</td>
+                    <td>Draw the string. Below it, draw 50 different repeating patterns, scanning character by character to find the best match.</td>
+                    <td><span class="pattern">Hash Map / Chunk Frequency</span></td>
+                    <td>The Block Dominance Grab</td>
+                    <td>Slice the word into chunks of size K. Use a Hash Map to count chunk frequencies. The optimal strategy is to keep the most frequent chunk and replace all other chunks with it. Operations = `Total Chunks - Max Chunk Frequency`.</td>
+                    <td>Draw the string. Slice it with vertical lines every K letters. Stack identical slices into piles. Find the tallest pile. The answer is the number of slices in all the *other* shorter piles combined.</td>
+                    <td>Linear Chunking $O(N)$</td>
+                    <td>Draw a single pass that hops by K steps at a time, updating a hash map in $O(1)$.</td>
+                    <td>Millions of generated strings.</td>
+                    <td>A Hash Map holding $N/K$ strings. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3140</td>
+                    <td>Consecutive Available Seats II</td>
+                    <td>Try flipping every possible 3-element window randomly using backtracking to find the shortest path to all 1s. $O(2^N)$.</td>
+                    <td>Exploding Flip Tree</td>
+                    <td>Draw the array. Branch out into every possible 3-window flip combination. State space grows exponentially.</td>
+                    <td><span class="pattern">Greedy Sliding Window</span></td>
+                    <td>The Forced-Hand Flipper</td>
+                    <td>Iterate left to right. If `nums[i] == 0`, you *must* flip the window starting at `i`. If you don't, `nums[i]` will forever remain 0. Flip `i, i+1, i+2`. If you reach the end and the last two aren't 1s, it's impossible.</td>
+                    <td>Draw the array. Slide a 3-block bracket left-to-right. If the first number in the bracket is a 0, flip all 3. If it's a 1, just slide forward.</td>
+                    <td>Single Pass $O(N)$</td>
+                    <td>Draw a straight timeline. At each step, perform max 3 bit flips.</td>
+                    <td>Recursive state history.</td>
+                    <td>Modified array in-place. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3141</td>
+                    <td>Maximum Hamming Distances</td>
+                    <td>Actually physically flip all elements from `i` to the end of the array every time you see a 0. $O(N^2)$.</td>
+                    <td>Cascading Array Waves</td>
+                    <td>Draw the array. When hitting a 0, draw a massive wave flipping every single element to the right. Do this repeatedly.</td>
+                    <td><span class="pattern">State Tracking (Parity / Flip Count)</span></td>
+                    <td>The Virtual Toggle Switch</td>
+                    <td>Don't physically flip anything. Track the total `flip_count`. The *actual* value of `nums[i]` is `(nums[i] + flip_count) % 2`. If the actual value is 0, increment `flip_count`.</td>
+                    <td>Draw the array. Hold a physical "Toggle Switch" in your hand (starts at 0). As you walk, mentally apply the switch to the number. If the result is 0, flip the switch in your hand and add a tally mark.</td>
+                    <td>Strict Linear Scan $O(N)$</td>
+                    <td>Draw a single straight line. Each element checked with a single $O(1)$ modulo operation.</td>
+                    <td>Continuous full-array rewrites.</td>
+                    <td>A single integer `flip_count`. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3155</td>
+                    <td>Maximum Number of Upgradable Servers</td>
+                    <td>Incrementally upgrade laptops 1 by 1, subtracting costs in a while loop until funds run out. $O(\text{Answer})$.</td>
+                    <td>Iterative Wallet Drain</td>
+                    <td>Draw a wallet. Draw an arrow buying one upgrade, updating the wallet, and repeating until empty.</td>
+                    <td><span class="pattern">Binary Search on Answer / Math</span></td>
+                    <td>The Feasibility Threshold</td>
+                    <td>Binary search the number of laptops `mid`. Calculate the total cost to upgrade `mid` laptops. If `cost <= budget`, try a higher `mid`. Otherwise, lower `mid`.</td>
+                    <td>Draw a number line of possible laptop counts. Drop a pin in the middle. Calculate the cost formula. If you can afford it, shade the left half green and drop a new pin on the right.</td>
+                    <td>Logarithmic Search $O(N \log(\text{Max}))$</td>
+                    <td>Draw a timeline cut in half repeatedly. Each check takes $O(N)$ to validate the cost.</td>
+                    <td>Iterative loop trackers.</td>
+                    <td>Pointers for Binary Search. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3156</td>
+                    <td>Employee Task Duration and Concurrent Tasks</td>
+                    <td>Join task tables, run unoptimized subqueries to check overlaps per employee.</td>
+                    <td>Cross-Join Overlap Grid</td>
+                    <td>Draw every task checked against every other task manually.</td>
+                    <td><span class="pattern">CTE + Interval Merging (Sweep Line SQL)</span></td>
+                    <td>The Flattened Timeline</td>
+                    <td>Unpivot start and end times into $+1$ and $-1$ events. Use window functions `SUM() OVER(ORDER BY time)` to find concurrent tasks, and calculate duration by merging overlapping intervals.</td>
+                    <td>Draw a timeline. Plot +1 when a task starts, -1 when it ends. The "height" of the line is the concurrent task count. The base of the line is the total duration.</td>
+                    <td>Sorting & Windowing $O(N \log N)$</td>
+                    <td>Draw a sorting pass for times, followed by a linear window aggregation.</td>
+                    <td>Massive self-join memory.</td>
+                    <td>Internal sort/window buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3170</td>
+                    <td>Lexicographically Minimum String After Removing Stars</td>
+                    <td>Every time you see a star, scan the entire string backwards to find the smallest character and delete it. $O(N^2)$.</td>
+                    <td>Backtracking Eraser</td>
+                    <td>Draw the string. Hit a star. Draw an arrow scanning all the way left to find the best letter, erase it, and shift the array.</td>
+                    <td><span class="pattern">Priority Queue / Array of Stacks</span></td>
+                    <td>The 26-Bin Tie-Breaker</td>
+                    <td>Maintain 26 stacks (one for each letter a-z) storing their indices. When hitting a `*`, iterate from 'a' to 'z'. Pop from the first non-empty stack (smallest letter). The stack ensures you pop the *largest index* (closest to the star) for tie-breaking.</td>
+                    <td>Draw 26 vertical tubes. When reading 'c' at index 4, drop '4' into tube 'c'. Read '*'? Look at tube 'a', 'b', then 'c'. Pull the top number out of the first non-empty tube and cross out that index in your string.</td>
+                    <td>Linear Scan + Constant Lookup $O(N)$</td>
+                    <td>Draw a timeline. At each step, inserting takes $O(1)$. Popping takes max 26 steps ($O(1)$).</td>
+                    <td>Full string copies.</td>
+                    <td>26 arrays/stacks and a boolean "deleted" array. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3171</td>
+                    <td>Find Subarray With Bitwise OR Closest to K</td>
+                    <td>Generate all $N^2$ subarrays, calculate Bitwise AND from scratch for each, compare to K. $O(N^2)$.</td>
+                    <td>Overlapping AND Brackets</td>
+                    <td>Draw the array. Draw brackets covering every possible subarray, recalculating the AND at every step.</td>
+                    <td><span class="pattern">Shrinking Bitwise Set</span></td>
+                    <td>The 32-State Sieve</td>
+                    <td>Bitwise AND only strictly decreases or stays the same. At index `i`, the number of unique AND results ending at `i` is at most 32. Maintain a Set of current AND results. Update it with `nums[i]`, check distance to K, and carry the Set to `i+1`.</td>
+                    <td>Draw the array. Below current number, draw a small box of max 32 numbers. Draw an arrow pulling the *next* number in, applying `&` to everything in the box, throwing out duplicates, and checking the K distance.</td>
+                    <td>Linear Scan * 32 $O(N \log(\text{Max}))$</td>
+                    <td>Draw a single line. At each node, a tiny fixed-size loop of max 32 operations occurs.</td>
+                    <td>Subarray storage.</td>
+                    <td>Two sets of max size 32. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3172</td>
+                    <td>Second Day Verification</td>
+                    <td>Subqueries using `MIN(date)` and `NOT IN` to find the second date manually.</td>
+                    <td>Exclusion Funnels</td>
+                    <td>Draw a list. Find the first date. Put it in a box. Scan the list again for the lowest date NOT in the box.</td>
+                    <td><span class="pattern">Window Function (DENSE_RANK)</span></td>
+                    <td>The Ordered Podium</td>
+                    <td>Use `DENSE_RANK() OVER(PARTITION BY user_id ORDER BY date ASC)`. Filter for `rank = 2`.</td>
+                    <td>Draw buckets for users. Sort dates chronologically. Hand out medals: Gold (1), Silver (2). Keep only the Silver rows.</td>
+                    <td>Partitioned Sort $O(N \log N)$</td>
+                    <td>Pipeline: Partition $\rightarrow$ Sort $\rightarrow$ Rank $\rightarrow$ Filter.</td>
+                    <td>Temp tables for exclusions.</td>
+                    <td>DB Window buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3245</td>
+                    <td>Alternating Groups III</td>
+                    <td>Generate all substrings, build frequency maps, and check if one map contains the other. $O(N^3)$.</td>
+                    <td>Sliding Frequency Grids</td>
+                    <td>Draw overlapping brackets. Count everything inside from scratch repeatedly.</td>
+                    <td><span class="pattern">Sliding Window + Deficit Counter</span></td>
+                    <td>The Missing-Chars Debt Tracker</td>
+                    <td>Count required chars in target. Use a sliding window. Track `deficit` (how many required chars are still missing). As window expands, reduce deficit. When `deficit == 0`, ALL substrings ending from `right` to the end of the string are valid. Add `N - right` to total, then shrink `left`.</td>
+                    <td>Draw the string. A window slides right. A "Debt" counter ticks down. When Debt hits 0, freeze the right pointer. Draw a giant bracket covering the rest of the string—count them all! Slide left to re-trigger debt.</td>
+                    <td>Two Pointer Pass $O(N)$</td>
+                    <td>Draw two arrows sliding left-to-right exactly once.</td>
+                    <td>$N^2$ frequency maps.</td>
+                    <td>Two frequency arrays (size 26). $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3262</td>
+                    <td>Find Overlapping Shifts</td>
+                    <td>Iterate from L to R. For each number, calculate its divisors to check if it has exactly 3. $O((R-L) \cdot \sqrt{R})$.</td>
+                    <td>Brute Force Divisor Search</td>
+                    <td>Draw the range. For every single number, draw a loop factoring it. Too slow.</td>
+                    <td><span class="pattern">Sieve of Eratosthenes + Math</span></td>
+                    <td>The Prime-Square Identifier</td>
+                    <td>A number has exactly 3 divisors *only* if it is the square of a prime number (e.g., 4, 9, 25). Find all primes up to $\sqrt{R}$. Count how many prime squares fall between L and R. Subtract this from total numbers in range.</td>
+                    <td>Draw a number line of primes. Square them. Drop these "Special" tokens onto the main range line [L, R]. Count the tokens. Subtract from the total length.</td>
+                    <td>Sieve Precomputation $O(\sqrt{R} \log \log \sqrt{R})$</td>
+                    <td>Draw a quick crossing-out grid up to $\sqrt{R}$, then a simple counting pass.</td>
+                    <td>Tracking all divisors.</td>
+                    <td>Boolean array up to $\sqrt{R}$. $O(\sqrt{R})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3268</td>
+                    <td>Find Overlapping Shifts II</td>
+                    <td>Try every pair of people (top-left, bottom-right). For each pair, scan all other people to see if they are inside the box. $O(N^3)$.</td>
+                    <td>Quadratic Box Checking</td>
+                    <td>Draw pairs. Draw a box. Scan the entire grid for trapped points.</td>
+                    <td><span class="pattern">Sorting + Sweeping Max-Y</span></td>
+                    <td>The Descending Ceiling Check</td>
+                    <td>Sort points by X (ascending), then Y (descending). Iterate `i` (top-left). Iterate `j` from `i+1` (bottom-right). To ensure the box is empty, maintain a `max_y` of any point seen between `i` and `j`. If `points[j].y < points[i].y` AND `points[j].y > max_y`, it's a valid empty box! Update `max_y`.</td>
+                    <td>Plot points on a graph. Lock a top-left point. Scan rightwards. Track the "highest point seen so far." If the next point is below your top-left but *above* the highest point seen, the box between them is empty.</td>
+                    <td>Nested Linear Pass $O(N^2)$</td>
+                    <td>Draw a sorting pass, followed by an NxN loop with $O(1)$ interior checks.</td>
+                    <td>Storing lists of box contents.</td>
+                    <td>In-place sorting. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3278</td>
+                    <td>Find Candidates for Data Scientist Position II</td>
+                    <td>Complex joins using `NOT IN` or subqueries to check specific skill strings.</td>
+                    <td>Iterative Skill Filtering</td>
+                    <td>Draw a candidate. Scan their skills. Cross-reference manually against a hardcoded list.</td>
+                    <td><span class="pattern">GROUP BY + HAVING COUNT()</span></td>
+                    <td>The Exact-Match Checklist</td>
+                    <td>Filter the table for the required skills. Group by Candidate ID. Use `HAVING COUNT(skill) = required_amount`.</td>
+                    <td>Draw candidates. Give them a checklist of required skills. If they have the skill, check the box. Filter out anyone who doesn't have 100% of the boxes checked.</td>
+                    <td>Hash Aggregation $O(N)$</td>
+                    <td>Draw a filter node followed by a grouping node.</td>
+                    <td>N/A</td>
+                    <td>DB grouping buffer. $O(\text{Candidates})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3279</td>
+                    <td>Maximum Total Area Occupied by Pistons</td>
+                    <td>Generate all possible rectangles in the grid, check if they contain all 1s. $O((R \cdot C)^2)$.</td>
+                    <td>Expanding Bounding Boxes</td>
+                    <td>Draw the grid. Draw thousands of random rectangles hoping to perfectly enclose the 1s.</td>
+                    <td><span class="pattern">Linear Scan (Min/Max Tracking)</span></td>
+                    <td>The 4-Wall Shrink</td>
+                    <td>Initialize `min_row`, `max_row`, `min_col`, `max_col`. Iterate the grid once. Whenever you see a 1, update these boundaries. Area = `(max_r - min_r + 1) * (max_c - min_c + 1)`.</td>
+                    <td>Draw the grid. Push 4 walls (Top, Bottom, Left, Right) inward from the edges. Stop each wall the exact moment it touches a '1'. The remaining box is your answer.</td>
+                    <td>Single Matrix Pass $O(R \cdot C)$</td>
+                    <td>Draw a single sweeping arrow across the 2D grid updating 4 variables.</td>
+                    <td>Storing subgrids.</td>
+                    <td>Four integer variables. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3284</td>
+                    <td>Sum of Consecutive Subarrays</td>
+                    <td>Find all subsequences, check if they are consecutive (difference of 1), sum them. $O(2^N)$.</td>
+                    <td>Exponential Subsequence Tree</td>
+                    <td>Draw the array. Branch out to pick elements. Verify if they form a step-by-step sequence.</td>
+                    <td><span class="pattern">Dynamic Programming (State: Value & Direction)</span></td>
+                    <td>The Ascending/Descending Chains</td>
+                    <td>Use DP Maps: `inc[val]` (sum of increasing sequences ending at `val`) and `dec[val]` (decreasing). When you see `val`, `inc[val] = inc[val-1] + count[val-1] * val + val`. Update a global sum.</td>
+                    <td>Draw numbers. For '5', look at the "Increasing Chain" bucket for '4'. Attach '5' to all those chains. Add the new sum to the total. Do the same for decreasing (look at '6').</td>
+                    <td>Linear Scan + Map Update $O(N)$</td>
+                    <td>Draw a straight timeline. $O(1)$ map lookups and math at each step.</td>
+                    <td>Storing lists of sequences.</td>
+                    <td>Two Hash Maps. $O(N)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 7)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>LC #</th>
+                    <th>Problem Title (Your List)</th>
+                    <th>Brute Force Method</th>
+                    <th>Best Complexity Viz (Brute)</th>
+                    <th>How to Draw it on Paper (Brute Comp)</th>
+                    <th>Most Optimised Core Pattern</th>
+                    <th>Best Viz Technique (Optimised)</th>
+                    <th>How to Visually Dry Run It</th>
+                    <th>How to Draw it on Paper (Optimised)</th>
+                    <th>Best Complexity Viz (Optimised)</th>
+                    <th>How to Draw it on Paper (Optimised Comp)</th>
+                    <th>Mem Viz (Brute)</th>
+                    <th>Mem Viz (Optimised)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>3344</td>
+                    <td>Maximum Sized Array</td>
+                    <td>Generate all possible combinations of removing $N/2$ elements from both arrays and calculate the distinct union for each. $O(\text{Exponential})$.</td>
+                    <td>Combinatorial Deletion Tree</td>
+                    <td>Draw two arrays. Branch out for every possible combination of crossing out half the numbers.</td>
+                    <td><span class="pattern">Greedy / Set Intersection</span></td>
+                    <td>The Venn Diagram Filler</td>
+                    <td>Find unique elements in A, unique in B, and their intersection. Greedily keep elements unique to A up to $N/2$, then unique to B up to $N/2$. Fill any remaining quota from the intersection.</td>
+                    <td>Draw a Venn Diagram (A, B, Shared). Pick dots from the "A-only" crescent until you hit $N/2$. Do the same for "B-only". If you still need dots, grab them from the "Shared" middle.</td>
+                    <td>Hash Set Operations $O(N)$</td>
+                    <td>Draw two arrays pouring into three buckets (Unique A, Unique B, Shared).</td>
+                    <td>Generating thousands of arrays.</td>
+                    <td>Three Hash Sets. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3346</td>
+                    <td>Maximum Frequency of an Element After Performing Operations I</td>
+                    <td>For every number in the array, try applying $+k$ to $-k$, and recount the frequency of every resulting number from scratch. $O(N^2 \cdot K)$.</td>
+                    <td>Range-Shift Tally Grid</td>
+                    <td>Draw the array. Pick a number. Try shifting it. Rescan the entire array to see how many match it. Repeat.</td>
+                    <td><span class="pattern">Sliding Window / Sweep Line</span></td>
+                    <td>The Overlapping Auras</td>
+                    <td>Sort the array. For each $nums[i]$, its "reach" is $[nums[i]-k, nums[i]+k]$. Use a sliding window to find the max number of elements whose reaches overlap at a single point, bounded by the operation limit.</td>
+                    <td>Draw numbers on a number line. Draw a "cloud" of size $2k$ around each. Slide a vertical scanner left to right to find the spot where the most clouds overlap.</td>
+                    <td>Sorting + Sliding Window $O(N \log N)$</td>
+                    <td>Draw a sorting tree, followed by a two-pointer sliding window that passes over the array once.</td>
+                    <td>Frequency maps for every shift.</td>
+                    <td>Pointers. $O(1)$ auxiliary space.</td>
+                </tr>
+
+                <tr>
+                    <td>3347</td>
+                    <td>Maximum Frequency of an Element After Performing Operations II</td>
+                    <td>Same as above but fails due to massive constraint sizes, causing memory/time limits if using raw arrays.</td>
+                    <td>Memory-Crashing Range Array</td>
+                    <td>Draw a number line from 1 to $10^9$. Try to place $+1$ and $-1$ marks on it. Out of memory.</td>
+                    <td><span class="pattern">Coordinate Compression / Sweep Line Map</span></td>
+                    <td>The Sparse Timeline Tally</td>
+                    <td>Use a TreeMap (or sort unique critical points) to track only the exact start $[x-k]$ and end $[x+k+1]$ of overlaps. Sweep through these sparse, critical points to maintain the active overlap count.</td>
+                    <td>Draw a huge empty number line. Only drop pins at the exact start and end of a cloud. Sweep only from pin to pin, skipping the massive empty spaces in between.</td>
+                    <td>Map Sorting + Sweep $O(N \log N)$</td>
+                    <td>Draw $N$ points plotted into a balanced BST, followed by an $O(N)$ traversal of the tree.</td>
+                    <td>Massive $10^9$ sized arrays.</td>
+                    <td>A TreeMap/Dictionary of size $3N$. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3353</td>
+                    <td>Minimum Total Operations</td>
+                    <td>Simulate adding/subtracting 1 to subarrays iteratively until the target is reached. $O(N \cdot \text{Max\_Diff})$.</td>
+                    <td>Iterative Subarray Sculpting</td>
+                    <td>Draw the array. Draw a block over a mismatched section and shift it up by 1. Check target. Repeat hundreds of times.</td>
+                    <td><span class="pattern">Difference Array / Greedy</span></td>
+                    <td>The Step-Delta Tracker</td>
+                    <td>Create a difference array `diff[i] = target[i] - nums[i]`. Iterate through `diff`. An operation is required whenever the current difference changes magnitude or sign compared to the previous difference.</td>
+                    <td>Draw a bar chart of the differences. You only pay a "cost" when a bar is taller than the bar to its left (in the same direction). Add up these positive vertical step-ups.</td>
+                    <td>Linear Scan $O(N)$</td>
+                    <td>Draw a single straight line reading the differences, updating a total sum in $O(1)$.</td>
+                    <td>Constantly mutating array states.</td>
+                    <td>A single `diff` tracking variable. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3357</td>
+                    <td>Minimize the Maximum Adjacent Element Difference</td>
+                    <td>Try filling missing elements with every possible number from $1$ to $10^9$. $O(\text{Infinite})$.</td>
+                    <td>Infinite Guessing Grid</td>
+                    <td>Draw an array with blanks. Try slotting 1, then 2, then 3 into the blanks.</td>
+                    <td><span class="pattern">Binary Search on Answer</span></td>
+                    <td>The Tolerance Tester</td>
+                    <td>Binary search the maximum allowed difference $D$. For a given $D$, determine the valid range $[L, R]$ for the missing numbers that satisfies the difference constraint with their known neighbors. If valid, try a smaller $D$.</td>
+                    <td>Draw a number line of possible differences. Guess $D=5$. Look at the array blanks. "Can I pick a number that is within 5 of the left neighbor AND right neighbor?" If yes, guess a tighter $D$.</td>
+                    <td>Logarithmic Search $O(N \log(\text{Max\_Val}))$</td>
+                    <td>Draw a binary search tree of answers. At each node, draw an $O(N)$ validation scan.</td>
+                    <td>Storing every filled array permutation.</td>
+                    <td>Range tracking variables. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3358</td>
+                    <td>Books with NULL Ratings</td>
+                    <td>Pull all books into application memory and use `if (rating == null)` to filter them.</td>
+                    <td>App-Side Filtering Loop</td>
+                    <td>Draw all database rows transferring over a network wire to be checked one by one in code.</td>
+                    <td><span class="pattern">SQL IS NULL</span></td>
+                    <td>The DB-Native Null Catcher</td>
+                    <td>Use `SELECT book_id FROM Books WHERE rating IS NULL`.</td>
+                    <td>Draw the table. The database engine drops a net that only catches rows where the rating slot is completely empty.</td>
+                    <td>Single Index Scan $O(N)$</td>
+                    <td>Draw a direct query path through the table.</td>
+                    <td>Wasted network bandwidth.</td>
+                    <td>DB Query Result Buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3359</td>
+                    <td>Find Sorted Submatrices With Maximum Element at Most K</td>
+                    <td>(SQL Context) Complex self-joins attempting to simulate window functions across categories and bounds.</td>
+                    <td>Nested Subquery Matrix</td>
+                    <td>Draw multiple tables joined together with confusing `MAX()` and `GROUP BY` logic that drops rows.</td>
+                    <td><span class="pattern">CASE WHEN / Aggregate Filtering</span></td>
+                    <td>The Conditional Category Sorter</td>
+                    <td>Use `CASE WHEN element <= K THEN 1 ELSE 0 END` to flag items, then aggregate or filter based on these specific conditional rules.</td>
+                    <td>Draw the rows. Stick a green label on items $\le K$ and a red label on others. Group them into buckets and only keep the buckets with all green labels.</td>
+                    <td>Linear Scan / Hash Agg $O(N)$</td>
+                    <td>Draw a single pass applying a logical switch and grouping.</td>
+                    <td>N/A</td>
+                    <td>Internal DB buffer. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3360</td>
+                    <td>Stone Removal Game</td>
+                    <td>Simulate the game recursively with Minimax, exploring every possible sequence of moves. $O(2^N)$.</td>
+                    <td>Recursive Minimax Tree</td>
+                    <td>Draw a pile of stones. Branch out for Alice's moves, then Bob's moves, checking win states at the bottom.</td>
+                    <td><span class="pattern">Math / Simulation</span></td>
+                    <td>The Deterministic Subtractor</td>
+                    <td>The game rules are fixed (Alice takes 10, Bob takes 9, Alice takes 8...). Just simulate it directly with a while loop, alternating turns until someone can't make a move.</td>
+                    <td>Draw a pile of stones. Alice grabs a handful of 10. Bob grabs 9. Keep shrinking the pile by a strictly decreasing number until someone's hand hits the bottom of an empty bucket.</td>
+                    <td>Constant Time Iteration $O(1)$</td>
+                    <td>Draw a loop that runs at most 10 times.</td>
+                    <td>Recursive call stack.</td>
+                    <td>A boolean turn flag. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3378</td>
+                    <td>Count Connected Components in LCM Graph</td>
+                    <td>Calculate the LCM for every pair $(i, j)$ and build an edge if $LCM \le threshold$. Run DFS. $O(N^2)$.</td>
+                    <td>Dense Quadratic Graph</td>
+                    <td>Draw $N$ dots. Draw lines between every single pair to check their LCM. Graph becomes too dense.</td>
+                    <td><span class="pattern">DSU + Multiples (Sieve-like)</span></td>
+                    <td>The Factor-Bridge Connector</td>
+                    <td>Instead of connecting numbers to numbers, connect numbers to their *multiples* up to the threshold using a Disjoint Set Union (DSU). If $x$ is in the array, union $x$ with $2x, 3x...$ if those multiples also exist.</td>
+                    <td>Draw the numbers. Instead of checking pairs, take '2'. Draw bridges from '2' to '4', '6', '8'. Then take '3'. Draw bridges to '6', '9'. The shared multiples merge the components automatically.</td>
+                    <td>Harmonic Series Scan $O(M \log M)$</td>
+                    <td>Draw a Sieve-like loop where the inner loop runs $M/i$ times. Highly optimized.</td>
+                    <td>Adjacency matrix of size $N \times N$.</td>
+                    <td>DSU parent array up to max threshold. $O(\text{Threshold})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3380</td>
+                    <td>Maximum Area Rectangle With Point Constraints I</td>
+                    <td>Check every possible combination of 4 points to see if they form a valid rectangle, and check all other points to ensure they aren't inside. $O(N^5)$.</td>
+                    <td>Quintic Geometry Search</td>
+                    <td>Draw a scatter plot. Pick 4 random points. Check angles. Scan all other points.</td>
+                    <td><span class="pattern">Diagonal Iteration + Hash Set</span></td>
+                    <td>The Bounding Box Verifier</td>
+                    <td>Put all points in a Hash Set. Iterate over every pair of points, treating them as the *diagonal* of a rectangle. Check if the other two required corners exist in the Set. If they do, verify no other points fall inside their bounding box.</td>
+                    <td>Draw the grid. Pick two points (top-left, bottom-right). Instantly check the Map for the other two corners. If present, draw the box and quickly scan the remaining points to ensure the box is empty.</td>
+                    <td>Diagonal Pair Scan $O(N^3)$</td>
+                    <td>Draw an $N^2$ loop to pick diagonals, followed by an $O(N)$ interior point check.</td>
+                    <td>N/A</td>
+                    <td>A Hash Set of points. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3381</td>
+                    <td>Maximum Subarray Sum With Length Divisible by K</td>
+                    <td>Generate all subarrays. Check if length is divisible by $k$. Calculate sum. $O(N^2)$.</td>
+                    <td>Modulo Subarray Brackets</td>
+                    <td>Draw the array. Bracket lengths of K, 2K, 3K. Sum everything from scratch.</td>
+                    <td><span class="pattern">Prefix Sum + Hash Map (Modulo Tracking)</span></td>
+                    <td>The Modulo-K Minimizer</td>
+                    <td>Maintain a running prefix sum. To find a subarray of length divisible by $k$ ending at $i$, we need a previous prefix sum at index $j$ where $j \pmod k == i \pmod k$. Keep a Map storing the *minimum* prefix sum seen so far for each index modulo $k$.</td>
+                    <td>Draw the array. As you walk, keep a tally. Put the tally in one of $k$ buckets based on your step number. To maximize your score, subtract the smallest tally sitting in your current modulo bucket.</td>
+                    <td>Single Linear Pass $O(N)$</td>
+                    <td>Draw a single straight line. $O(1)$ map lookup and update at each step.</td>
+                    <td>Storing sums for all $N^2$ subarrays.</td>
+                    <td>An array/map of size $K$. $O(K)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3382</td>
+                    <td>Maximum Area Rectangle With Point Constraints II</td>
+                    <td>Same as I, but fails due to $10^5$ constraints. $O(N^3)$ times out instantly.</td>
+                    <td>Memory-Crashing Point Scan</td>
+                    <td>Try to check interior points for a million possible rectangles.</td>
+                    <td><span class="pattern">Sweep Line + Segment Tree</span></td>
+                    <td>The Y-Axis Scanner</td>
+                    <td>Group points by X-coordinate. Sweep a vertical line left-to-right. Use a Segment Tree to efficiently track valid Y-intervals and answer queries about the maximum empty rectangle area formed between the current X and previous X values.</td>
+                    <td>Draw the points. A vertical laser sweeps left to right. It records the Y-height of pairs of points. If it sees the *exact same* Y-pair later, it calculates the box area, using the tree to ensure no points sneaked in.</td>
+                    <td>Sweep Line $O(N \log N)$</td>
+                    <td>Draw a timeline. At each step, update a Segment Tree in $O(\log N)$ time.</td>
+                    <td>$O(N^3)$ search space.</td>
+                    <td>Segment Tree. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3383</td>
+                    <td>Minimum Runes to Add to Cast Spell</td>
+                    <td>Try casting the spell by manually testing combinations of runes to add.</td>
+                    <td>Manual Combination Search</td>
+                    <td>Draw a spell circle and randomly guess which runes are missing.</td>
+                    <td><span class="pattern">Graph Reachability / SCC (Tarjan's)</span></td>
+                    <td>The Crystal Component Linker</td>
+                    <td>Treat crystals/runes as a directed graph. Find Strongly Connected Components (SCCs). Condense the graph into a Directed Acyclic Graph (DAG). The answer is the number of SCCs with an in-degree of 0 (sources that must be manually activated).</td>
+                    <td>Draw nodes and arrows. Circle groups of nodes that loop into each other (SCCs). Treat each circle as one giant node. Count the circles that have absolutely zero arrows pointing *into* them.</td>
+                    <td>Tarjan's DFS $O(V + E)$</td>
+                    <td>Draw a single DFS traversal to identify components, followed by an in-degree scan.</td>
+                    <td>Matrix of all reachability states.</td>
+                    <td>DFS stacks, `low-link` arrays. $O(V+E)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3385</td>
+                    <td>Minimum Time to Break Locks II</td>
+                    <td>Try all permutations of which lock to break first. $O(N!)$.</td>
+                    <td>Factorial Lock Sequence</td>
+                    <td>Draw N locks. Branch out for picking lock 1, 2, or 3 first. Tree explodes.</td>
+                    <td><span class="pattern">Bitmask DP</span></td>
+                    <td>The Multiplier State Grid</td>
+                    <td>Use a bitmask to represent broken locks. Your multiplier `X` increases based on how many locks are broken. `dp[mask]` is the minimum time to reach this state. Calculate the wait time for the next lock using `ceil(energy_needed / X)`.</td>
+                    <td>Draw a row of locks. Flip them open one by one. Each open lock increases your "Sword Power". Try different orders of opening them, recording the total waiting time for each exact combination of open/closed locks.</td>
+                    <td>Exponential State Transitions $O(N \cdot 2^N)$</td>
+                    <td>Draw a table of $2^N$ rows. Transitioning to the next state requires checking $N$ possible next locks.</td>
+                    <td>Recursive tracking of permutations.</td>
+                    <td>A DP array of size $2^N$. $O(2^N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3388</td>
+                    <td>Count Beautiful Splits in an Array</td>
+                    <td>Try every possible pair of split indices $(i, j)$ and physically compare the resulting substrings. $O(N^3)$.</td>
+                    <td>Nested Split String Comparisons</td>
+                    <td>Draw the array. Put two dividers. Run a loop to compare slice 1 to slice 2, and slice 2 to slice 3.</td>
+                    <td><span class="pattern">LCP Array (Longest Common Prefix) / Z-Algorithm</span></td>
+                    <td>The Precomputed Prefix Matcher</td>
+                    <td>Precompute an `lcp[i][j]` table: the length of the longest common prefix starting at indices $i$ and $j$ in $O(N^2)$. To check if `str1` is a prefix of `str2`, simply check if `lcp[start1][start2] >= length(str1)` in $O(1)$ time.</td>
+                    <td>Draw the string. Build a 2D matrix storing how many letters match starting from any two points. Put two dividers in the string. Instead of comparing letters, instantly look up the matrix cell to see if the prefix condition holds.</td>
+                    <td>$O(N^2)$ Precompute + $O(N^2)$ Checks</td>
+                    <td>Draw a 2D matrix fill, followed by a double loop $(i, j)$ checking conditions in $O(1)$.</td>
+                    <td>Generating thousands of substrings.</td>
+                    <td>A 2D integer array `lcp`. $O(N^2)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeetCode Mastery: Custom Advanced List (Part 8)</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #1e1e1e; color: #d4d4d4; margin: 20px; }
+        .table-container { overflow-x: auto; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        table { width: max-content; border-collapse: collapse; background-color: #252526; }
+        th, td { border: 1px solid #404040; padding: 12px 16px; text-align: left; vertical-align: top; max-width: 300px; line-height: 1.5; }
+        th { background-color: #333333; color: #9cdcfe; position: sticky; top: 0; z-index: 10; }
+        tr:nth-child(even) { background-color: #2d2d30; }
+        tr:hover { background-color: #3f3f46; }
+        .pattern { color: #c586c0; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>LC #</th>
+                    <th>Problem Title (Your List)</th>
+                    <th>Brute Force Method</th>
+                    <th>Best Complexity Viz (Brute)</th>
+                    <th>How to Draw it on Paper (Brute Comp)</th>
+                    <th>Most Optimised Core Pattern</th>
+                    <th>Best Viz Technique (Optimised)</th>
+                    <th>How to Visually Dry Run It</th>
+                    <th>How to Draw it on Paper (Optimised)</th>
+                    <th>Best Complexity Viz (Optimised)</th>
+                    <th>How to Draw it on Paper (Optimised Comp)</th>
+                    <th>Mem Viz (Brute)</th>
+                    <th>Mem Viz (Optimised)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>3390</td>
+                    <td>Longest Team Pass Streak</td>
+                    <td>Explore every possible path through the grid using DFS, tracking negative values manually. $O(2^{R+C})$.</td>
+                    <td>Exponential Path Grid</td>
+                    <td>Draw a grid. From the top-left, branch right and down. Continue branching at every cell. The overlapping paths are too dense to trace.</td>
+                    <td><span class="pattern">3D Dynamic Programming</span></td>
+                    <td>The Layered Grid Extractor</td>
+                    <td>Use a 3D DP table `dp[r][c][k]` where `k` (0, 1, or 2) represents the number of negative values you've neutralized. Transition by taking the max of moving from top or left, factoring in whether you use a neutralization on the current cell.</td>
+                    <td>Draw 3 identical grids stacked like glass panes. Layer 0 has no neutralizations, Layer 1 has one, Layer 2 has two. To fill a cell in Layer 1, look at the cell above/left in Layer 1, OR pull from Layer 0 and "spend" a neutralization to ignore a negative number.</td>
+                    <td>State-Space Matrix $O(R \cdot C \cdot 3)$</td>
+                    <td>Draw three parallel grid passes. Constant $O(1)$ lookups at each cell.</td>
+                    <td>Massive recursion stack tracking path states.</td>
+                    <td>A 3D array of size $R \times C \times 3$. $O(R \cdot C)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3391</td>
+                    <td>Design a 3D Binary Matrix with Efficient Layer Tracking</td>
+                    <td>Iteratively subtract 1 or try random divisions to reach the target from max value. $O(\text{Target})$.</td>
+                    <td>Linear Countdown</td>
+                    <td>Draw a number line. Start at target, draw a million tiny $-1$ arrows backwards.</td>
+                    <td><span class="pattern">Greedy / Math (Reverse Operations)</span></td>
+                    <td>The Halving Shortcut</td>
+                    <td>Work backwards from the target to the start. If the target is even, divide by 2 (costs 1 operation). If it's odd, subtract 1 to make it even. This optimally minimizes operations.</td>
+                    <td>Draw the target number. If it ends in an even digit, cut the block in half. If odd, shave off 1 block, then cut the rest in half. Continue until you hit the start score.</td>
+                    <td>Logarithmic Reduction $O(\log N)$</td>
+                    <td>Draw a tree plunging straight down, halving at almost every step.</td>
+                    <td>Tracking all states in a BFS queue.</td>
+                    <td>A single integer variable. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3395</td>
+                    <td>Subsequences with a Unique Middle Mode I</td>
+                    <td>Generate all possible subsequences of length 5, find the middle element, count frequencies, and verify the mode. $O(N^5)$.</td>
+                    <td>Quintic Subsequence Forest</td>
+                    <td>Draw the array. Pick 5 numbers. Check the mode. Repeat for every combination.</td>
+                    <td><span class="pattern">Combinatorics + Prefix/Suffix Maps</span></td>
+                    <td>The Pivot Combinations</td>
+                    <td>Treat every index $i$ as the middle element. Use prefix and suffix frequency arrays to calculate how many valid pairs can be picked from the left and right such that `nums[i]` remains the strict mode.</td>
+                    <td>Draw the array. Lock a middle element. Look left: calculate combinations of choosing 2 numbers. Look right: do the same. Subtract invalid combinations where another number ties or beats your locked middle element's frequency.</td>
+                    <td>Linear Scan + Map Math $O(N \cdot \text{Unique\_Vals})$</td>
+                    <td>Draw a single pass timeline. At each step, iterate over a fixed-size frequency map.</td>
+                    <td>Storing millions of length-5 arrays.</td>
+                    <td>Prefix and Suffix Hash Maps. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3398</td>
+                    <td>Smallest Substring With Identical Characters I</td>
+                    <td>Try changing every combination of $K$ characters to see which one minimizes the longest identical block. $O(2^N)$.</td>
+                    <td>Combinatorial Mutation Tree</td>
+                    <td>Draw the string. Branch out by changing '0' to '1' at index 0, then index 1. Calculate block lengths for every variation.</td>
+                    <td><span class="pattern">Binary Search on Answer</span></td>
+                    <td>The Tolerance Slicer</td>
+                    <td>Binary search the *maximum allowed identical streak* $L$. For a block of $X$ identical characters, the minimum operations to break it into chunks of size $\le L$ is $X / (L+1)$. If total operations $\le K$, $L$ is possible!</td>
+                    <td>Draw the string. Group identical characters into blocks (e.g., "00000" is a block of 5). Guess a max length of 2. You need to "slice" the block of 5 every 3rd character. 5 / (2+1) = 1 slice. Sum the slices needed for all blocks.</td>
+                    <td>Logarithmic Search $O(N \log N)$</td>
+                    <td>Draw a binary search number line. Above each guess, draw a quick linear pass calculating required slices.</td>
+                    <td>Tracking all mutated string states.</td>
+                    <td>Variables for binary search pointers. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3399</td>
+                    <td>Smallest Substring With Identical Characters II</td>
+                    <td>Same as above, but with $10^5$ constraints, standard backtracking instantly hits Time Limit Exceeded.</td>
+                    <td>Memory-Crashing Recursion</td>
+                    <td>The call stack overflows trying to mutate $10^5$ characters.</td>
+                    <td><span class="pattern">Binary Search on Answer + Edge Cases</span></td>
+                    <td>The Optimized Tolerance Slicer</td>
+                    <td>Identical to 3398, but you must carefully handle the edge case where $L=1$ (which requires the string to be perfectly alternating like '0101' or '1010'). Check $L=1$ manually in $O(N)$, then binary search for $L \ge 2$.</td>
+                    <td>For $L=1$, compare the string against "0101..." and "1010..." to count mismatched characters. For $L \ge 2$, use the exact same slicing math: $X / (L+1)$.</td>
+                    <td>Log Search + Edge Check $O(N \log N)$</td>
+                    <td>Draw the alternating string check, followed by the binary search timeline.</td>
+                    <td>N/A</td>
+                    <td>Pointers and accumulators. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3400</td>
+                    <td>Maximum Number of Matching Indices After Right Shifts</td>
+                    <td>Physically shift the second array right by 1, compare all elements. Shift again, compare. Repeat $N$ times. $O(N^2)$.</td>
+                    <td>Quadratic Array Spinning</td>
+                    <td>Draw two arrays. Compare them. Rotate the bottom one. Compare them all again.</td>
+                    <td><span class="pattern">KMP / String Matching (or O(N^2) if constraints allow)</span></td>
+                    <td>The Offset Frequency Counter</td>
+                    <td>If constraints are small, brute force is fine. If large, note that an element `A[i]` matches `B[j]` if `B` is shifted by `(j - i + N) % N`. Calculate this required shift offset for every matching pair of values and find the most frequent offset.</td>
+                    <td>Draw array A and B. For a '5' at A[2] and a '5' at B[5], the shift needed is $(5 - 2) = 3$. Toss a coin into the "Shift by 3" bucket. Do this for all matching values. The heaviest bucket is the answer.</td>
+                    <td>Linear Map / Sorting $O(N)$</td>
+                    <td>Draw a single pass mapping values to indices, then counting offset frequencies.</td>
+                    <td>Creating $N$ physical copies of the shifted array.</td>
+                    <td>A frequency map of required shifts. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3416</td>
+                    <td>Subsequences with a Unique Middle Mode II</td>
+                    <td>Same as 3395 but with larger constraints. $O(N^5)$ is mathematically impossible to run.</td>
+                    <td>Combinatorial Nightmare</td>
+                    <td>(See 3395)</td>
+                    <td><span class="pattern">Advanced Combinatorics + Inclusion-Exclusion</span></td>
+                    <td>The Math-Driven Pivot</td>
+                    <td>Instead of checking all pairs, calculate the *total* possible valid prefixes/suffixes for a locked middle element, and strictly subtract the exact invalid patterns (where another number appears 2 or 3 times in the subsequence of 5) using precomputed frequency maps.</td>
+                    <td>Lock the middle element. Calculate total ways to pick 2 from the left and 2 from the right. Subtract the specific subsets where a competing number out-frequencies your locked middle.</td>
+                    <td>Linear Scan with Constant Math $O(N)$</td>
+                    <td>Draw a timeline. The math calculations inside the loop are $O(1)$ combinations based on tracked frequencies.</td>
+                    <td>Memory crash.</td>
+                    <td>Frequency tracking maps. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3420</td>
+                    <td>Count Non-Decreasing Subarrays After K Operations</td>
+                    <td>Generate all subarrays, determine operations needed to make each non-decreasing, and sum. $O(N^3)$.</td>
+                    <td>Sliding Re-Calculation Window</td>
+                    <td>Bracket every subarray. Traverse the bracket to calculate leveling costs.</td>
+                    <td><span class="pattern">Monotonic Stack + Two Pointers</span></td>
+                    <td>The Bounded Leveling Tool</td>
+                    <td>Use a monotonic decreasing stack to efficiently calculate the cost to "level up" elements in a sliding window to maintain a non-decreasing order. If the cost exceeds K, shrink the window from the left and update the cost dynamically.</td>
+                    <td>Draw the array. Slide a window right. If a number dips, you must "fill" that dip with operations to match the previous max. Track these filling costs in a stack. If you run out of K operations, move the left bound forward and refund the operations.</td>
+                    <td>Amortized Two-Pointer $O(N)$</td>
+                    <td>Draw two pointers moving strictly left-to-right. Stack pushes/pops are $O(1)$ amortized.</td>
+                    <td>Tracking costs for all $N^2$ subarrays independently.</td>
+                    <td>A Monotonic Stack storing indices and costs. $O(N)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3426</td>
+                    <td>Manhattan Distances of All Arrangements of Pieces</td>
+                    <td>Generate all $\binom{R \times C}{K}$ piece arrangements. For each, calculate pairwise Manhattan distances. $O(\text{Exponential})$.</td>
+                    <td>Factorial Grid Layouts</td>
+                    <td>Draw a grid. Place K pieces. Measure them. Move one piece. Measure again.</td>
+                    <td><span class="pattern">Math (Contribution to Sum) + Combinatorics</span></td>
+                    <td>The Single-Axis Separator</td>
+                    <td>Instead of looking at grids, calculate how much a single pair of coordinates $(x_1, x_2)$ contributes to the TOTAL sum across ALL valid boards. Distance on X-axis and Y-axis are independent. Multiply the distance by the number of ways to place the remaining $K-2$ pieces.</td>
+                    <td>Pick two columns, $c_1$ and $c_2$. The horizontal distance is $|c_1 - c_2|$. If two pieces are placed in these columns, there are $\binom{R \times C - 2}{K - 2}$ ways to place the rest of the pieces. Multiply distance $\times$ combinations. Sum for all column pairs and row pairs.</td>
+                    <td>Mathematical Formulation $O(R + C)$</td>
+                    <td>Draw two simple loops (one for rows, one for columns) calculating formulas.</td>
+                    <td>Generating physical grids.</td>
+                    <td>A few large integer accumulators for modulo math. $O(1)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3435</td>
+                    <td>Frequencies of Shortest Supersequences</td>
+                    <td>Generate all permutations of merging strings, find the shortest, and count frequencies. $O(\text{Exponential})$.</td>
+                    <td>String Merging Web</td>
+                    <td>Draw two strings. Interleave them in every possible way to find the shortest overlap.</td>
+                    <td><span class="pattern">DP on Strings / Bitmasking</span></td>
+                    <td>The Character-Overlap Maximizer</td>
+                    <td>Find the Longest Common Subsequence (LCS). The Shortest Common Supersequence length is $L_1 + L_2 - \text{LCS}$. To track frequencies, trace back the DP table, tracking character choices that lead to optimal paths.</td>
+                    <td>Draw a 2D grid comparing String 1 and String 2. Trace the path of the LCS. Every character not in the LCS must be included exactly once. Characters in the LCS are shared. Build a frequency map from this optimal path.</td>
+                    <td>2D Matrix Processing $O(N \cdot M)$</td>
+                    <td>Draw an $N \times M$ matrix being filled, followed by a linear traceback path.</td>
+                    <td>Storing thousands of merged string variations.</td>
+                    <td>A 2D DP matrix. $O(N \cdot M)$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3485</td>
+                    <td>Longest Common Prefix of K Strings After Removal</td>
+                    <td>Generate all combinations of removing characters, and check the common prefix for each. $O(\text{Exponential})$.</td>
+                    <td>Combinatorial Deletion Forest</td>
+                    <td>Cross out characters randomly in K strings. Compare their prefixes.</td>
+                    <td><span class="pattern">Trie + Dynamic Programming</span></td>
+                    <td>The Pruned Prefix Tree</td>
+                    <td>Insert all strings into a Trie. Use DP on the Trie to calculate the minimum removals required to make a specific Trie node (representing a prefix) common among K strings.</td>
+                    <td>Draw a Trie. To make the prefix "APP" common across 3 strings, look at how many letters you have to delete from strings that diverge from the "APP" path. Use DP to find the cheapest way to force K strings down that exact path.</td>
+                    <td>Trie Traversal + DP $O(\text{Total Chars} \cdot K)$</td>
+                    <td>Draw a Trie. At each node, compute a small DP state merging child costs.</td>
+                    <td>Storing modified strings.</td>
+                    <td>A Trie data structure and DP state arrays. $O(\text{Total Chars})$ space.</td>
+                </tr>
+
+                <tr>
+                    <td>3489</td>
+                    <td>Zero Array Transformation IV</td>
+                    <td>Iteratively subtract values from subarrays, checking if all elements reach zero. $O(N \cdot Q)$.</td>
+                    <td>Iterative Array Flattening</td>
+                    <td>Draw the array. Subtract from a range. Scan the whole array to check for zeros.</td>
+                    <td><span class="pattern">Difference Array / Sweep Line</span></td>
+                    <td>The Overlapping Operations Tally</td>
+                    <td>You want to know if queries can reduce the array to zero. Use a difference array to apply all queries at once in $O(Q)$ time. Sweep it in $O(N)$ to get the total reduction at each index. Compare against the original array.</td>
+                    <td>Draw a blank line. Drop $+V$ at the start of a query range and $-V$ at the end. Sweep left-to-right to build the total "reduction power" at each index. If the power $\ge$ the original number everywhere, it works!</td>
+                    <td>Two-Pass Linear $O(N + Q)$</td>
+                    <td>Draw a pass over the queries, then a single sweep pass over the array.</td>
+                    <td>Modifying the array continuously.</td>
+                    <td>A single difference array of size $N+1$. $O(N)$ space.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
